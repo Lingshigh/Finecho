@@ -18,6 +18,7 @@ class AnalysisRequest(BaseModel):
     source_url: HttpUrl | None = None
     target_companies: list[str] = Field(default_factory=list, max_length=50)
     max_depth: int = Field(default=2, ge=1, le=3)
+    lenient_matching: bool = False
 
 
 class GraphNode(BaseModel):
@@ -45,6 +46,15 @@ class Evidence(BaseModel):
     year: int | None = None
     source_url: str | None = None
     relevance: float = Field(ge=0, le=1)
+
+
+class CompanyCandidate(BaseModel):
+    """A company selected for fact-checking, with the search path that surfaced it."""
+
+    company_id: str
+    name: str
+    ticker: str
+    reason: str
 
 
 class CompanyVerdict(BaseModel):

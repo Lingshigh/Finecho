@@ -33,6 +33,11 @@ class AnalysisService:
                     "task_id": task_id,
                     "request": task.request.model_dump(mode="json"),
                     "warnings": [],
+                    "match_attempts": 0,
+                    "evidence_attempts": 0,
+                    "max_match_attempts": 3,
+                    "max_evidence_attempts": 3,
+                    "lenient_matching": task.request.lenient_matching,
                 }
             )
             result = AnalysisResult(

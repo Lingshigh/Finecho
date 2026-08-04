@@ -68,5 +68,10 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 4. 对财务比例使用结构化财务表计算；LLM 只负责提取候选与解释，不能直接生成数字。
 5. API Key 适合黑客松演示；正式环境应接 OAuth2/JWT、可信代理和分布式限流。
 
+## 优化记录
+
+- [01 多 Agent 条件路由与循环回退](docs/optimization-01-langgraph-multi-agent.md)：核验拆分为 form_candidate / gather_evidence / adversarial_check 三个 Agent，匹配与证据两处循环放宽且保证有界终止。
+- [02 LLM 对抗式事实核查](docs/optimization-02-llm-adversarial-factcheck.md)：把 LLM 接入对抗式核验，规则分 + LLM 立场加权合成，无 key/依赖缺失/API 故障均安全降级。
+
 > `data/` 中所有公司比例与文本均为演示数据，不构成投资建议，也不能用于真实交易决策。
 
