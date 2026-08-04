@@ -1,0 +1,53 @@
+[
+  {
+    "id": "600438.SH",
+    "ticker": "600438.SH",
+    "name": "通威股份",
+    "industries": ["光伏", "新能源"],
+    "products": ["高纯晶硅", "太阳能电池片"],
+    "revenue_exposure": 0.72,
+    "rd_ratio": 0.032,
+    "capacity_constraint": "阶段性供需过剩导致价格压力"
+  },
+  {
+    "id": "300750.SZ",
+    "ticker": "300750.SZ",
+    "name": "宁德时代",
+    "industries": ["储能", "新能源汽车", "新能源"],
+    "products": ["动力电池", "储能电池"],
+    "revenue_exposure": 0.89,
+    "rd_ratio": 0.083,
+    "capacity_constraint": "上游锂资源价格及海外合规风险"
+  },
+  {
+    "id": "002594.SZ",
+    "ticker": "002594.SZ",
+    "name": "比亚迪",
+    "industries": ["新能源汽车", "储能"],
+    "products": ["新能源汽车", "动力电池", "储能系统"],
+    "revenue_exposure": 0.81,
+    "rd_ratio": 0.061,
+    "capacity_constraint": "海外市场准入与供应链波动"
+  },
+  {
+    "id": "601012.SH",
+    "ticker": "601012.SH",
+    "name": "隆基绿能",
+    "industries": ["光伏", "新能源"],
+    "products": ["硅片", "光伏组件"],
+    "revenue_exposure": 0.91,
+    "rd_ratio": 0.048,
+    "capacity_constraint": "组件价格下行与技术路线切换"
+  },
+  {
+    "id": "000001.DEMO",
+    "ticker": "000001.DEMO",
+    "name": "幻影科技（演示）",
+    "industries": ["人工智能", "新能源"],
+    "products": ["信息技术服务"],
+    "revenue_exposure": 0.03,
+    "rd_ratio": 0.009,
+    "capacity_constraint": "尚无相关产品规模化收入"
+  }
+]
+

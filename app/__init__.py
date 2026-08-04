@@ -1,0 +1,1 @@
+"""FinEcho application bootstrap package."""
