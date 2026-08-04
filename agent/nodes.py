@@ -111,10 +111,8 @@ def _evidence_sufficient(state: AnalysisState) -> bool:
 
 
 def route_evidence(state: AnalysisState) -> str:
-    """证据不足且还有重试次数时回退到 broaden_evidence；否则进入对抗式核验。"""
-    if not _evidence_sufficient(state) and state.get("evidence_attempts", 0) < state.get(
-        "max_evidence_attempts", DEFAULT_MAX_EVIDENCE_ATTEMPTS
-    ):
+    """证据不足时先放宽一次检索；放宽后若某候选仍无证据，说明知识库中确无内容，直接进入核验。"""
+    if not _evidence_sufficient(state) and state.get("evidence_attempts", 0) < 1:
         return "broaden_evidence"
     return "adversarial_check"
 

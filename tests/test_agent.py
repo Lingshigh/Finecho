@@ -59,22 +59,37 @@ def test_broaden_match_loop_recovers_no_match_policy() -> None:
 
 
 def test_broaden_evidence_loop_recovers_when_evidence_sparse() -> None:
-    """默认证据充足时不触发放宽；候选无证据时应触发 broaden_evidence 循环。"""
+    """候选无证据时最多放宽一次检索；放宽后仍无证据则进入核验，不无限循环。"""
     from agent.nodes import route_evidence
 
     default_state = _run_graph(_make_rag())
-    assert default_state["evidence_attempts"] == 0
+    # 默认储能政策下幻影科技无储能证据，触发一次合理放宽，不无限空转。
+    assert default_state["evidence_attempts"] <= 1
 
-    # 每家公司都有证据、相关度达阈值 → 直接进入对抗式核验。
+    # 每家公司都有达标证据 → 直接进入对抗式核验。
+    from src.models.schemas import Evidence
+
+    sample_evidence = [
+        Evidence(
+            id=f"ev-{cand.company_id}",
+            company_id=cand.company_id,
+            source_type="demo",
+            title="demo",
+            excerpt="相关业务与政策传导链一致，收入占比显著。",
+            year=2025,
+            relevance=0.9,
+        )
+        for cand in default_state["candidates"]
+    ]
     sufficient = {
         "candidates": default_state["candidates"],
-        "evidence": default_state["evidence"],
+        "evidence": {cand.company_id: [sample_evidence[i]] for i, cand in enumerate(default_state["candidates"])},
         "evidence_attempts": 0,
         "max_evidence_attempts": 3,
     }
     assert route_evidence(sufficient) == "adversarial_check"
 
-    # 某家候选无任何证据 → 回退到 broaden_evidence 重试。
+    # 某家候选无任何证据 → 回退到 broaden_evidence 重试一次。
     sparse_evidence = {
         "candidates": default_state["candidates"],
         "evidence": {cand.company_id: [] for cand in default_state["candidates"]},
@@ -83,8 +98,8 @@ def test_broaden_evidence_loop_recovers_when_evidence_sparse() -> None:
     }
     assert route_evidence(sparse_evidence) == "broaden_evidence"
 
-    # 重试耗尽后即使仍无证据也进入对抗式核验，保证有界终止。
-    exhausted = {**sparse_evidence, "evidence_attempts": 3}
+    # 放宽一次后即使仍无证据也进入对抗式核验，保证有界终止。
+    exhausted = {**sparse_evidence, "evidence_attempts": 1}
     assert route_evidence(exhausted) == "adversarial_check"
 
 

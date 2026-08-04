@@ -1,5 +1,7 @@
 import json
+import math
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -10,13 +12,18 @@ from src.models.schemas import Evidence
 
 def _tokens(text: str) -> set[str]:
     latin = set(re.findall(r"[a-zA-Z0-9]{2,}", text.lower()))
-    chinese = re.findall(r"[\u4e00-\u9fff]", text)
+    chinese = re.findall(r"[一-鿿]", text)
     bigrams = {"".join(chinese[i : i + 2]) for i in range(max(0, len(chinese) - 1))}
     return latin | bigrams
 
 
 class GraphRAGService:
-    """Small local GraphRAG adapter with a clean upgrade path to ChromaDB."""
+    """GraphRAG adapter：图遍历负责候选召回（find_companies），TF-IDF 余弦负责证据排序（retrieve）。
+
+    图结构：industry --contains--> company --produces--> product。
+    检索时把查询词映射到图中节点做 BFS，再以图路径距离作为相关度因子；
+    证据排序用 TF-IDF 余弦，替代原字符重叠词袋。
+    """
 
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
@@ -24,6 +31,13 @@ class GraphRAGService:
         self.documents: list[dict[str, Any]] = self._load("evidence.json")
         self.graph = nx.MultiDiGraph()
         self._build_graph()
+        # 查询词 → 图节点 id 的映射（子串匹配，用于把 policy 关键词落到图上）。
+        self._term_to_node: dict[str, str] = {}
+        self._index_terms()
+        # TF-IDF 索引：idf 向量、每篇文档的词频向量。
+        self._idf: dict[str, float] = {}
+        self._doc_vectors: dict[str, dict[str, float]] = {}
+        self._build_tfidf()
 
     def _load(self, name: str) -> list[dict[str, Any]]:
         with (self.data_dir / name).open("r", encoding="utf-8") as handle:
@@ -41,36 +55,119 @@ class GraphRAGService:
                 self.graph.add_node(product_id, kind="product", label=product)
                 self.graph.add_edge(company["id"], product_id, relation="produces")
 
+    def _index_terms(self) -> None:
+        for node_id, attrs in self.graph.nodes(data=True):
+            label = attrs.get("label") or node_id.split(":", 1)[-1]
+            self._term_to_node[label] = node_id
+
+    def _resolve_start_nodes(self, terms: list[str]) -> list[str]:
+        """把查询词映射到图节点 id：先精确命中 label，再子串兜底（须确保节点存在于图中）。"""
+        resolved: list[str] = []
+        seen: set[str] = set()
+        for term in terms:
+            node = self._term_to_node.get(term)
+            if node is None:
+                node = next(
+                    (nid for nid in self._term_to_node if term in nid or nid in term),
+                    None,
+                )
+            if node and node not in seen and self.graph.has_node(node):
+                seen.add(node)
+                resolved.append(node)
+        return resolved
+
     def find_companies(
         self, industries: list[str], products: list[str], targets: list[str] | None = None
     ) -> list[dict[str, Any]]:
+        """图遍历召回候选公司：从查询词落图节点出发做 BFS，路径越近相关度越高。"""
         target_set = {value.lower() for value in (targets or [])}
-        candidates: list[tuple[float, dict[str, Any]]] = []
-        query_terms = set(industries + products)
-        for company in self.companies:
-            if target_set and not (
-                company["id"].lower() in target_set or company["name"].lower() in target_set
-            ):
-                continue
-            own_terms = set(company["industries"] + company["products"])
-            overlap = sum(
-                1 for query in query_terms for own in own_terms if query in own or own in query
+        if target_set:
+            # 显式指定目标时，直接从目标公司出发按暴露度排序。
+            return [
+                company
+                for company in self.companies
+                if company["id"].lower() in target_set or company["name"].lower() in target_set
+            ]
+
+        start_nodes = self._resolve_start_nodes([*industries, *products])
+        if not start_nodes:
+            return []
+
+        # 无向 BFS：industry --contains--> company --produces--> product 视为可双向遍历，
+        # 用「查询词节点 → 公司」的最短路径长度作为相关度距离。
+        undirected = self.graph.to_undirected()
+        distances: dict[str, int] = {}
+        for start in start_nodes:
+            for node, dist in nx.single_source_shortest_path_length(
+                undirected, start, cutoff=2
+            ).items():
+                if self.graph.nodes[node].get("kind") == "company" and (
+                    node not in distances or dist < distances[node]
+                ):
+                    distances[node] = dist
+
+        ranked: list[tuple[float, dict[str, Any]]] = []
+        for company_id, dist in distances.items():
+            company = self.graph.nodes[company_id]
+            # 图距离越近分越高：dist=1（industry 直达）给满分，dist=2（经 product）减半。
+            graph_score = 1.0 if dist == 1 else 0.6
+            ranked.append(
+                (graph_score + company.get("revenue_exposure", 0.0), company)
             )
-            if overlap or target_set:
-                candidates.append((overlap + company["revenue_exposure"], company))
-        return [item for _, item in sorted(candidates, key=lambda pair: pair[0], reverse=True)]
+        return [
+            dict(item[1])
+            for item in sorted(ranked, key=lambda pair: pair[0], reverse=True)
+        ]
+
+    def _build_tfidf(self) -> None:
+        doc_count = len(self.documents)
+        doc_freq: dict[str, int] = defaultdict(int)
+        for document in self.documents:
+            text = " ".join([document["title"], document["excerpt"], *document["keywords"]])
+            for token in _tokens(text):
+                doc_freq[token] += 1
+        self._idf = {
+            token: math.log(1 + doc_count / (1 + freq)) for token, freq in doc_freq.items()
+        }
+        for document in self.documents:
+            self._doc_vectors[document["id"]] = self._vectorize(
+                " ".join([document["title"], document["excerpt"], *document["keywords"]])
+            )
+
+    def _vectorize(self, text: str) -> dict[str, float]:
+        counts: dict[str, int] = defaultdict(int)
+        for token in _tokens(text):
+            counts[token] += 1
+        norm = math.sqrt(sum((count * self._idf.get(token, 0.0)) ** 2 for token, count in counts.items()))
+        if norm == 0:
+            return {}
+        return {
+            token: count * self._idf.get(token, 0.0) / norm
+            for token, count in counts.items()
+        }
+
+    @staticmethod
+    def _cosine(a: dict[str, float], b: dict[str, float]) -> float:
+        if not a or not b:
+            return 0.0
+        shared = set(a) & set(b)
+        if not shared:
+            return 0.0
+        return sum(a[token] * b[token] for token in shared)
 
     def retrieve(self, company_id: str, query: str, limit: int = 3) -> list[Evidence]:
-        query_tokens = _tokens(query)
+        query_vector = self._vectorize(query)
         ranked: list[tuple[float, dict[str, Any]]] = []
         for document in self.documents:
             if document["company_id"] != company_id:
                 continue
-            doc_text = " ".join([document["title"], document["excerpt"], *document["keywords"]])
-            doc_tokens = _tokens(doc_text)
-            overlap = len(query_tokens & doc_tokens)
-            relevance = min(1.0, 0.45 + overlap * 0.08)
-            ranked.append((relevance, document))
+            relevance = self._cosine(query_vector, self._doc_vectors.get(document["id"], {}))
+            if relevance > 0:
+                ranked.append((relevance, document))
+        # 对命中集合按最大余弦做 min-max 归一化，使每家 top 证据相关度落在可比范围，
+        # 避免 TF-IDF 稀疏向量的绝对分数（普遍偏低）误判为"证据不足"。
+        max_score = ranked[0][0] if ranked else 0.0
+        ranked = [(score / max_score, document) for score, document in ranked] if max_score else []
         return [
             Evidence(
                 id=document["id"],
@@ -80,7 +177,7 @@ class GraphRAGService:
                 excerpt=document["excerpt"],
                 year=document.get("year"),
                 source_url=document.get("source_url"),
-                relevance=score,
+                relevance=round(score, 3),
             )
             for score, document in sorted(ranked, key=lambda pair: pair[0], reverse=True)[:limit]
         ]
