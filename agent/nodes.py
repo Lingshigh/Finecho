@@ -80,6 +80,12 @@ def _unique(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
 
 
+# 图谱节点层级：policy=0, industry=1, supply_chain/product=2, company=3。
+# max_depth 语义与层级一致：值为 N 时展示 level 0..N 的节点。
+def _visible_levels(max_depth: int) -> set[int]:
+    return {level for level in range(max_depth + 1)}
+
+
 def route_match(state: AnalysisState) -> str:
     """没有匹配到公司且还有重试次数时，回退到 broaden_match 循环；否则继续验证。"""
     if not state.get("companies") and state.get("match_attempts", 0) < state.get(
@@ -309,6 +315,10 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
 
     def assemble_graph(state: AnalysisState) -> dict:
         request = state["request"]
+        # max_depth 控制图谱展示层级：1=政策+行业，2=+供应链节点，3=+关联公司（完整链路）。
+        # 分析与核验始终用全量数据，depth 只影响图谱渲染，保证不同 depth 下判定一致。
+        max_depth = int(request.get("max_depth", 3))
+        visible = _visible_levels(max_depth)
         policy_id = f"policy:{state['task_id']}"
         nodes = [GraphNode(id=policy_id, label=request["policy_title"], type="policy", level=0)]
         edges: list[GraphEdge] = []
@@ -358,6 +368,10 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
                     evidence_ids=[item.id for item in verdict.evidence],
                 )
             )
+        # 按可见层级裁剪节点，并去掉指向不可见节点的边，避免悬空引用。
+        node_ids = {node.id for node in nodes if node.level in visible}
+        nodes = [node for node in nodes if node.level in visible]
+        edges = [edge for edge in edges if edge.source in node_ids and edge.target in node_ids]
         warnings = _unique(
             [*state.get("warnings", []), "当前结果使用演示财务证据，不构成投资建议。"]
         )

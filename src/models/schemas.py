@@ -17,7 +17,7 @@ class AnalysisRequest(BaseModel):
     policy_text: str = Field(min_length=20, max_length=100_000)
     source_url: HttpUrl | None = None
     target_companies: list[str] = Field(default_factory=list, max_length=50)
-    max_depth: int = Field(default=2, ge=1, le=3)
+    max_depth: int = Field(default=3, ge=1, le=3, description="图谱展示层级：1=政策+行业，2=+供应链，3=完整链路")
     lenient_matching: bool = False
 
 

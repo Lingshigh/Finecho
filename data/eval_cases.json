@@ -1,0 +1,141 @@
+{
+  "_meta": {
+    "description": "FinEcho 对抗式核验标注数据集（演示版）。expected_verdict 为人工标注的真实受益性结论，与模型输出比对用于评测 precision/recall/F1 与 hotspot 二分类 AUC。",
+    "verdict_definition": {
+      "high_confidence": "主营业务与该政策传导链强相关，财报证据支持，可判定真实受益",
+      "watch": "存在部分关联或证据不足，需跟踪，不应视为明确受益",
+      "hotspot_risk": "关联度低、收入暴露度小或无证据支撑，疑似蹭热点/伪概念"
+    },
+    "note": "数据为演示样例，不构成投资建议。"
+  },
+  "cases": [
+    {
+      "case_id": "storage-catl",
+      "policy_title": "新型储能示范政策",
+      "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+      "target_company": "300750.SZ",
+      "expected_verdict": "high_confidence",
+      "label_reason": "宁德时代储能电池为核心主业，暴露度 0.89，真实受益"
+    },
+    {
+      "case_id": "storage-byd",
+      "policy_title": "新型储能示范政策",
+      "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+      "target_company": "002594.SZ",
+      "expected_verdict": "high_confidence",
+      "label_reason": "比亚迪储能系统与动力电池垂直整合，真实受益"
+    },
+    {
+      "case_id": "storage-tongwei",
+      "policy_title": "新型储能示范政策",
+      "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+      "target_company": "600438.SH",
+      "expected_verdict": "watch",
+      "label_reason": "通威主营光伏，与储能电池关联为间接供应链，暴露度中等，应 watch"
+    },
+    {
+      "case_id": "storage-longi",
+      "policy_title": "新型储能示范政策",
+      "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+      "target_company": "601012.SH",
+      "expected_verdict": "watch",
+      "label_reason": "隆基主营光伏组件，与储能政策仅间接相关，应 watch"
+    },
+    {
+      "case_id": "storage-huanxing",
+      "policy_title": "新型储能示范政策",
+      "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+      "target_company": "000001.DEMO",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "幻影科技无储能相关规模化收入，暴露度仅 0.03，蹭热点"
+    },
+    {
+      "case_id": "pv-tongwei",
+      "policy_title": "光伏产业扶持政策",
+      "policy_text": "加快光伏电站建设，推动高纯晶硅、硅片与光伏组件产业高质量发展。",
+      "target_company": "600438.SH",
+      "expected_verdict": "high_confidence",
+      "label_reason": "通威高纯晶硅为核心业务，真实受益"
+    },
+    {
+      "case_id": "pv-longi",
+      "policy_title": "光伏产业扶持政策",
+      "policy_text": "加快光伏电站建设，推动高纯晶硅、硅片与光伏组件产业高质量发展。",
+      "target_company": "601012.SH",
+      "expected_verdict": "high_confidence",
+      "label_reason": "隆基硅片与组件为核心业务，真实受益"
+    },
+    {
+      "case_id": "pv-catl",
+      "policy_title": "光伏产业扶持政策",
+      "policy_text": "加快光伏电站建设，推动高纯晶硅、硅片与光伏组件产业高质量发展。",
+      "target_company": "300750.SZ",
+      "expected_verdict": "watch",
+      "label_reason": "宁德时代主营动力/储能电池，与光伏仅泛新能源间接相关，应 watch"
+    },
+    {
+      "case_id": "pv-huanxing",
+      "policy_title": "光伏产业扶持政策",
+      "policy_text": "加快光伏电站建设，推动高纯晶硅、硅片与光伏组件产业高质量发展。",
+      "target_company": "000001.DEMO",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "幻影科技无光伏相关收入，蹭热点"
+    },
+    {
+      "case_id": "nev-catl",
+      "policy_title": "新能源汽车下乡",
+      "policy_text": "推动新能源汽车推广应用，促进动力电池及整车产业高质量发展。",
+      "target_company": "300750.SZ",
+      "expected_verdict": "high_confidence",
+      "label_reason": "宁德时代动力电池为新能源汽车核心，真实受益"
+    },
+    {
+      "case_id": "nev-byd",
+      "policy_title": "新能源汽车下乡",
+      "policy_text": "推动新能源汽车推广应用，促进动力电池及整车产业高质量发展。",
+      "target_company": "002594.SZ",
+      "expected_verdict": "high_confidence",
+      "label_reason": "比亚迪整车与电池全链条受益，真实受益"
+    },
+    {
+      "case_id": "nev-tongwei",
+      "policy_title": "新能源汽车下乡",
+      "policy_text": "推动新能源汽车推广应用，促进动力电池及整车产业高质量发展。",
+      "target_company": "600438.SH",
+      "expected_verdict": "watch",
+      "label_reason": "通威与新能源汽车关联弱，应 watch"
+    },
+    {
+      "case_id": "ai-catl",
+      "policy_title": "人工智能应用试点",
+      "policy_text": "支持大模型与算力基础设施发展，推动人工智能行业应用落地。",
+      "target_company": "300750.SZ",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "宁德时代与人工智能无实质业务关联，模型当前判 high_confidence 属过度宽容"
+    },
+    {
+      "case_id": "ai-longi",
+      "policy_title": "人工智能应用试点",
+      "policy_text": "支持大模型与算力基础设施发展，推动人工智能行业应用落地。",
+      "target_company": "601012.SH",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "隆基与人工智能无实质业务关联，模型当前判 watch 属过度宽容"
+    },
+    {
+      "case_id": "ai-huanxing",
+      "policy_title": "人工智能应用试点",
+      "policy_text": "支持大模型与算力基础设施发展，推动人工智能行业应用落地。",
+      "target_company": "000001.DEMO",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "幻影科技虽涉 AI 概念但无规模化收入，仍判蹭热点"
+    },
+    {
+      "case_id": "semi-catl",
+      "policy_title": "半导体国产替代",
+      "policy_text": "支持半导体材料、设备与芯片设计产业自主可控发展。",
+      "target_company": "300750.SZ",
+      "expected_verdict": "hotspot_risk",
+      "label_reason": "宁德时代与半导体无实质业务关联，模型当前判 high_confidence 属过度宽容"
+    }
+  ]
+}

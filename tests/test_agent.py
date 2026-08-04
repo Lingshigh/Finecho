@@ -109,6 +109,33 @@ def test_retry_cap_prevents_infinite_loop() -> None:
     assert state["verdicts"]
 
 
+def test_max_depth_controls_graph_levels() -> None:
+    """max_depth 只裁剪图谱展示层级，不影响核验结论。"""
+    depth1 = _run_graph(_make_rag(), request={"policy_title": "新型储能示范政策",
+        "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+        "target_companies": [], "max_depth": 1})
+    depth2 = _run_graph(_make_rag(), request={"policy_title": "新型储能示范政策",
+        "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+        "target_companies": [], "max_depth": 2})
+    depth3 = _run_graph(_make_rag(), request={"policy_title": "新型储能示范政策",
+        "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+        "target_companies": [], "max_depth": 3})
+
+    types = {n.type for n in depth1["nodes"]}
+    assert types == {"policy", "industry"}
+    types2 = {n.type for n in depth2["nodes"]}
+    assert types2 == {"policy", "industry", "supply_chain"}
+    types3 = {n.type for n in depth3["nodes"]}
+    assert types3 == {"policy", "industry", "supply_chain", "company"}
+
+    # 层级裁剪不影响核验：三档判定完全一致。
+    def _verdict_keys(st: dict) -> list:
+        return sorted((v.company_id, v.verdict) for v in st["verdicts"])
+
+    assert _verdict_keys(depth1) == _verdict_keys(depth2) == _verdict_keys(depth3)
+    assert len(depth3["verdicts"]) == 5
+
+
 def test_rule_score_penalizes_low_exposure() -> None:
     from agent.nodes import rule_score
 
