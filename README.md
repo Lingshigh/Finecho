@@ -62,8 +62,8 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 
 ## 从演示版升级到生产版
 
-1. 将 `InMemoryJobRepository` 换为 PostgreSQL/Redis，将后台任务换为 Arq/Celery。
-2. 在 `GraphRAGService` 后接 ChromaDB 向量召回，并把财报实体关系写入 Neo4j 或图数据库。
+1. 将 InMemoryJobRepository 换为 PostgreSQL/Redis，将后台任务换为 Arq/Celery。
+2. 在 GraphRAGService后接 ChromaDB 向量召回，并把财报实体关系写入 Neo4j 或图数据库。
 3. 将 PDF 入库拆成独立流水线：下载、OCR、MD&A/问询函分段、元数据校验、Embedding。
 4. 对财务比例使用结构化财务表计算；LLM 只负责提取候选与解释，不能直接生成数字。
 5. API Key 适合黑客松演示；正式环境应接 OAuth2/JWT、可信代理和分布式限流。
