@@ -3,6 +3,7 @@ import html as html_module
 import re
 from collections.abc import Iterable
 from datetime import date
+from pathlib import Path
 
 from src.models.policy_schemas import (
     AuthenticityGrade,
@@ -81,9 +82,11 @@ class PolicyService:
         self,
         repository: InMemoryPolicyRepository,
         agents: PolicyAgentOrchestrator | None = None,
+        data_dir: Path | None = None,
     ) -> None:
         self.repository = repository
         self.agents = agents or PolicyAgentOrchestrator()
+        self.data_dir = data_dir
         self._quarantine: list[QuarantinedItem] = []
 
     async def bootstrap(self) -> None:
@@ -95,6 +98,50 @@ class PolicyService:
         await self.repository.upsert_many(enriched)
         for relation in _seed_relations():
             await self.repository.add_relation(relation)
+        # 追加真实政策种子（data/policy_seed.json + policy_relations.json），保留演示种子。
+        if self.data_dir is not None:
+            await self._load_real_seed()
+            await self._load_optional_seed("shenzhen_policy.json")
+
+    async def _load_optional_seed(self, name: str) -> None:
+        """加载可选政策种子文件（如深圳政策），结构对齐 PolicyDocument；缺失/非法时静默跳过。"""
+        path = self.data_dir / name
+        if not path.exists():
+            return
+        import json as _json
+
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                payload = _json.load(handle)
+        except (OSError, ValueError):
+            return
+        if not isinstance(payload, list):
+            return
+        documents = [PolicyDocument.model_validate(item) for item in payload]
+        await self.repository.upsert_many(documents)
+
+    async def _load_real_seed(self) -> None:
+        """加载 scripts/build_policy_seed.py 生成的真实政策种子，追加到内存仓库。
+
+        文件缺失时静默跳过（首次 clone 无 data 产物时仍可运行演示数据）。
+        """
+        seed_path = self.data_dir / "policy_seed.json"
+        if not seed_path.exists():
+            return
+        import json as _json
+
+        with seed_path.open("r", encoding="utf-8") as handle:
+            payload = _json.load(handle)
+        if not isinstance(payload, list):
+            return
+        documents = [PolicyDocument.model_validate(item) for item in payload]
+        await self.repository.upsert_many(documents)
+        relations_path = self.data_dir / "policy_relations.json"
+        if relations_path.exists():
+            with relations_path.open("r", encoding="utf-8") as handle:
+                relations_payload = _json.load(handle)
+            for item in relations_payload or []:
+                await self.repository.add_relation(PolicyRelation.model_validate(item))
 
     async def list(
         self,

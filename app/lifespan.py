@@ -11,6 +11,7 @@ from src.repositories.policy_repository import InMemoryPolicyRepository
 from src.services.analysis_service import AnalysisService
 from src.services.event_bus import EventBus
 from src.services.policy_agents import OptionalPolicyAgentLLM, PolicyAgentOrchestrator
+from src.services.policy_bridge import PolicyBridgeService
 from src.services.policy_service import PolicyService
 from src.services.rag_service import GraphRAGService
 
@@ -33,10 +34,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         policy_agent_llm,
         enabled=settings.policy_agents_enabled,
     )
-    policy_service = PolicyService(policy_repository, policy_agents)
+    policy_service = PolicyService(policy_repository, policy_agents, data_dir=project_root / "data")
     await policy_service.bootstrap()
     app.state.settings = settings
     app.state.rag_service = rag
-    app.state.analysis_service = AnalysisService(repository, rag, llm, event_bus)
+    app.state.policy_bridge = PolicyBridgeService(policy_service)
+    app.state.analysis_service = AnalysisService(
+        repository, rag, llm, event_bus, policy_bridge=app.state.policy_bridge
+    )
     app.state.policy_service = policy_service
     yield

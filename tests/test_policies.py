@@ -67,3 +67,15 @@ def test_unknown_policy_returns_404() -> None:
         response = client.get("/api/v1/policies/not-found")
         assert response.status_code == 404
         assert response.json()["code"] == "not_found"
+
+
+def test_region_filter_returns_200() -> None:
+    """region 筛选参数应被接受（深圳政策加载后按 region=深圳市 命中）。"""
+    with TestClient(app) as client:
+        response = client.get("/api/v1/policies", params={"region": "深圳市"})
+        assert response.status_code == 200
+        body = response.json()
+        assert "total" in body
+        # 深圳政策未生成 shenzhen_policy.json 时 total 可能为 0，但接口不应报错。
+        for item in body["items"]:
+            assert "深圳市" in item["scope"]["regions"]

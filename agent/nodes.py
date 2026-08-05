@@ -20,6 +20,24 @@ _BROAD_PRODUCTS = [
     "技术服务",
 ]
 
+# 前端"政策类型/行业"下拉的选项集合（与 data/chain_rules.json 规则名 + 政策库行业标签对齐）。
+# 修改此处时保持与 scripts/build_policy_seed.py 的 INDUSTRY_KEYWORDS 一致。
+INDUSTRY_HINT_OPTIONS = (
+    "储能",
+    "光伏",
+    "新能源汽车",
+    "人工智能",
+    "半导体",
+    "机器人",
+    "低空经济",
+    "数字经济",
+    "生物医药",
+    "氢能",
+    "绿色低碳",
+    "智能航运",
+    "科技金融",
+)
+
 # 规则触发后，把规则主行业映射为更宽泛的兜底行业（用于 broaden_match 时的泛化）。
 RELATED_INDUSTRY_RULES = {
     "光伏": "新能源",
@@ -40,6 +58,17 @@ LLM_WEIGHT = 0.3
 # LLM 立场 → 分数映射。
 _LLM_STANCE_SCORE = {"support": 0.9, "neutral": 0.5, "challenge": 0.25}
 
+# 规则分权重：产品是否命中政策传导链是主导信号（0.30），
+# 行业交集是"间接相关"的弱信号（0.12，仅在产品未命中时计入），
+# 证据相关度使用 TF-IDF 绝对余弦（0.25），业务暴露度退居次要（0.40）。
+_EXPOSURE_WEIGHT = 0.40
+_RELEVANCE_WEIGHT = 0.25
+_RD_WEIGHT = 0.15
+_PRODUCT_OVERLAP_WEIGHT = 0.30
+_INDUSTRY_OVERLAP_WEIGHT = 0.12
+_NO_EVIDENCE_PENALTY = 0.10
+_LOW_EXPOSURE_PENALTY = 0.10
+
 
 def rule_score(
     *,
@@ -48,14 +77,23 @@ def rule_score(
     relevance: float,
     product_overlap: bool,
     has_evidence: bool,
+    industry_overlap: bool = False,
 ) -> float:
-    """基于财报暴露度、证据相关度、研发强度与产品交集的规则评分，与 LLM 核查无耦合。"""
-    score = 0.55 * exposure + 0.2 * relevance + 0.15 * min(1.0, rd_ratio / 0.08)
-    score += 0.1 if product_overlap else 0
-    if exposure < 0.05:
-        score -= 0.2
+    """基于财报暴露度、证据相关度、研发强度与传导链命中情况的规则评分，与 LLM 核查无耦合。
+
+    产品真正命中政策传导链（product_overlap）是受益与否的第一判别项；
+    行业交集仅在无产品交集时提供弱正向信号，避免把"泛新能源"一律打成蹭热点。
+    """
+    score = (
+        _EXPOSURE_WEIGHT * exposure
+        + _RELEVANCE_WEIGHT * relevance
+        + _RD_WEIGHT * min(1.0, rd_ratio / 0.08)
+        + (_PRODUCT_OVERLAP_WEIGHT if product_overlap else (_INDUSTRY_OVERLAP_WEIGHT if industry_overlap else 0))
+    )
     if not has_evidence:
-        score *= 0.8
+        score -= _NO_EVIDENCE_PENALTY
+    if exposure < 0.05:
+        score -= _LOW_EXPOSURE_PENALTY
     return round(max(0.0, min(1.0, score)), 3)
 
 
@@ -113,7 +151,7 @@ def route_match(state: AnalysisState) -> str:
 
 
 def _evidence_sufficient(state: AnalysisState) -> bool:
-    """每个候选至少有一条相关度 >= 0.4 的证据才算充足；否则交由对抗式核验前先放宽检索。"""
+    """每个候选至少有一条相关度 > 0 的证据（绝对余弦，未归一化）才算充足；否则交由对抗式核验前先放宽检索。"""
     candidates = state.get("candidates", [])
     if not candidates:
         return True
@@ -122,7 +160,7 @@ def _evidence_sufficient(state: AnalysisState) -> bool:
         items = evidence.get(candidate.company_id, [])
         if not items:
             return False
-        if max((item.relevance for item in items), default=0) < 0.4:
+        if max((item.relevance for item in items), default=0) <= 0.01:
             return False
     return True
 
@@ -134,7 +172,9 @@ def route_evidence(state: AnalysisState) -> str:
     return "adversarial_check"
 
 
-def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Callable]:
+def build_nodes(
+    rag: GraphRAGService, llm: OptionalPolicyLLM, policy_bridge=None
+) -> dict[str, Callable]:
     # 产业链规则从 data/chain_rules.json 加载，可按需扩充而无需改代码。
     chain_rules = load_chain_rules(rag.data_dir)
 
@@ -165,6 +205,10 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
         )
         industries.extend(matched_industries)
         products.extend(matched_products)
+        # 用户显式指定的行业提示置首，优先级：用户 > LLM > 规则表。
+        hint = state["request"].get("industry_hint")
+        if hint:
+            industries = [hint, *industries]
         if not industries:
             industries = ["政策相关产业"]
         if not products:
@@ -290,19 +334,37 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
             evidence = state["evidence"].get(candidate.company_id, [])
             if not evidence:
                 warnings.append(f"未检索到 {company['name']} 的核验证据，判定信息有限。")
+            product_overlap = any(
+                product in chain_node or chain_node in product
+                for product in company.get("products", [])
+                for chain_node in state.get("products", [])
+            )
+            industry_overlap = any(
+                industry in company.get("industries", [])
+                for industry in state.get("industries", [])
+            )
+            exposure = float(company.get("revenue_exposure", 0))
+            relevance = max((item.relevance for item in evidence), default=0.15)
             rule = rule_score(
-                exposure=float(company.get("revenue_exposure", 0)),
+                exposure=exposure,
                 rd_ratio=float(company.get("rd_ratio", 0)),
-                relevance=max((item.relevance for item in evidence), default=0.25),
-                product_overlap=any(
-                    product in chain_node or chain_node in product
-                    for product in company.get("products", [])
-                    for chain_node in state.get("products", [])
-                ),
+                relevance=relevance,
+                product_overlap=product_overlap,
                 has_evidence=bool(evidence),
+                industry_overlap=industry_overlap,
             )
             score = blend_scores(rule, stance)
-            divergence = round(max(0.0, min(1.0, 1 - score + (0.15 if float(company.get("revenue_exposure", 0)) < 0.05 else 0))), 3)
+            # 背离度：产品未命中传导链 / 证据不足 / 无收入暴露三者叠加推高蹭热点风险，
+            # 校准带 0.2*(0.5-score) 保持"低受益更危险"的方向一致性但不与 1-score 严格互补。
+            divergence = round(
+                max(0.0, min(1.0,
+                    0.55
+                    - (0.30 if product_overlap else (0.10 if industry_overlap else 0))
+                    + (0.12 if not evidence else 0)
+                    + (0.10 if exposure < 0.05 else 0)
+                    + 0.20 * (0.5 - score))),
+                3,
+            )
             if score >= 0.7 and divergence <= 0.4:
                 verdict = "high_confidence"
             elif score < 0.4 or divergence >= 0.7:
@@ -310,15 +372,13 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
             else:
                 verdict = "watch"
             reasons = [
-                f"相关业务收入暴露度（样例）为 {float(company.get('revenue_exposure', 0)):.1%}",
-                f"证据检索相关度最高为 {max((item.relevance for item in evidence), default=0.25):.0%}",
+                f"相关业务收入暴露度（样例）为 {exposure:.1%}",
+                f"证据检索相关度最高为 {relevance:.0%}",
                 "核心产品与政策传导节点存在交集"
-                if any(
-                    product in chain_node or chain_node in product
-                    for product in company.get("products", [])
-                    for chain_node in state.get("products", [])
-                )
-                else "未发现强产品交集",
+                if product_overlap
+                else ("所属行业与政策传导链存在交集"
+                      if industry_overlap
+                      else "未发现强产品交集"),
                 f"主要约束：{company.get('capacity_constraint', '暂无数据')}",
             ]
             if llm_check is not None:
@@ -333,7 +393,7 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
                     verdict=verdict,
                     benefit_probability=score,
                     divergence_score=divergence,
-                    revenue_exposure=float(company.get("revenue_exposure", 0)),
+                    revenue_exposure=exposure,
                     reasons=reasons,
                     evidence=evidence,
                 )
@@ -407,6 +467,61 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
         )
         return {"nodes": nodes, "edges": edges, "warnings": warnings}
 
+    async def compose_report(state: AnalysisState) -> dict:
+        """在装配完图谱后生成产业研报：优先 LLM，未配置/失败则用规则模板兜底。
+
+        LLM 输出缺失维度时，用规则模板补齐缺失维度（LLM 主体 + 规则补位）。
+        若注入了 PolicyBridgeService，先按行业/关键词查政策库，把关联政策注入研报上下文。
+        """
+        from src.services.report_service import build_rule_report
+
+        request = state["request"]
+        edges = state.get("edges", [])
+        edge_stats = _edge_stats(edges)
+        related_policies, related_relations = [], []
+        if policy_bridge is not None:
+            try:
+                related_policies, related_relations = await policy_bridge.find_related(
+                    industries=state.get("industries", []),
+                    keywords=state.get("policy_keywords", []),
+                )
+            except Exception:  # noqa: BLE001 - 政策库桥接故障不影响分析链路
+                related_policies, related_relations = [], []
+        llm_report = await llm.generate_industry_report(
+            policy_title=request["policy_title"],
+            summary=state.get("policy_summary", ""),
+            keywords=state.get("policy_keywords", []),
+            industries=state.get("industries", []),
+            products=state.get("products", []),
+            edge_stats=edge_stats,
+            companies=state.get("companies", []),
+            verdicts=state.get("verdicts", []),
+            related_policies=related_policies,
+        )
+        if llm_report is not None and len(llm_report.dimensions) == 4:
+            return {"report": llm_report}
+        rule_report = build_rule_report(
+            policy_title=request["policy_title"],
+            policy_summary=state.get("policy_summary", ""),
+            keywords=state.get("policy_keywords", []),
+            industries=state.get("industries", []),
+            products=state.get("products", []),
+            nodes=state.get("nodes", []),
+            edges=edges,
+            verdicts=state.get("verdicts", []),
+            companies=state.get("companies", []),
+            source_url=request.get("source_url"),
+            related_policies=related_policies,
+            related_relations=related_relations,
+        )
+        # LLM 已产出部分维度时，用规则结果补齐缺失维度。
+        if llm_report is not None and llm_report.dimensions:
+            existing_keys = {dim.key for dim in llm_report.dimensions}
+            missing = [dim for dim in rule_report.dimensions if dim.key not in existing_keys]
+            llm_report.dimensions.extend(missing)
+            return {"report": llm_report}
+        return {"report": rule_report}
+
     return {
         "extract_policy": extract_policy,
         "expand_chain": expand_chain,
@@ -417,6 +532,7 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
         "broaden_evidence": broaden_evidence,
         "adversarial_check": adversarial_check,
         "assemble_graph": assemble_graph,
+        "compose_report": compose_report,
     }
 
 
@@ -428,3 +544,11 @@ def _unique_ids(companies: list[dict[str, Any]]) -> list[dict[str, Any]]:
             seen.add(company["id"])
             result.append(company)
     return result
+
+
+def _edge_stats(edges: list[GraphEdge]) -> str:
+    """把图谱边按 relation 折叠成紧凑文本（如 'impacts×2、benefits×4'），供 LLM prompt 使用。"""
+    counter: dict[str, int] = {}
+    for edge in edges:
+        counter[edge.relation] = counter.get(edge.relation, 0) + 1
+    return "、".join(f"{relation}×{count}" for relation, count in counter.items())

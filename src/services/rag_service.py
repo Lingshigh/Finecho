@@ -22,12 +22,14 @@ class GraphRAGService:
 
     图结构：industry --contains--> company --produces--> product。
     检索时把查询词映射到图中节点做 BFS，再以图路径距离作为相关度因子；
-    证据排序用 TF-IDF 余弦，替代原字符重叠词袋。
+    证据排序用 TF-IDF 余弦绝对分数（不做 min-max 归一化，保证跨公司可比），替代原字符重叠词袋。
     """
 
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
         self.companies: list[dict[str, Any]] = self._load("companies.json")
+        # 追加 AKShare 动态行业公司（文件缺失时静默跳过，保持仅演示公司池可运行）。
+        self.companies.extend(self._load_optional("companies.dynamic.json"))
         self.documents: list[dict[str, Any]] = self._load("evidence.json")
         self.graph = nx.MultiDiGraph()
         self._build_graph()
@@ -42,6 +44,18 @@ class GraphRAGService:
     def _load(self, name: str) -> list[dict[str, Any]]:
         with (self.data_dir / name).open("r", encoding="utf-8") as handle:
             return json.load(handle)
+
+    def _load_optional(self, name: str) -> list[dict[str, Any]]:
+        """加载可选数据文件；文件缺失或格式非法时返回空列表，不抛错。"""
+        path = self.data_dir / name
+        if not path.exists():
+            return []
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            return payload if isinstance(payload, list) else []
+        except (OSError, ValueError):
+            return []
 
     def _build_graph(self) -> None:
         for company in self.companies:
@@ -164,11 +178,9 @@ class GraphRAGService:
             relevance = self._cosine(query_vector, self._doc_vectors.get(document["id"], {}))
             if relevance > 0:
                 ranked.append((relevance, document))
-        # 对命中集合按最大余弦做 min-max 归一化，使每家 top 证据相关度落在可比范围，
-        # 避免 TF-IDF 稀疏向量的绝对分数（普遍偏低）误判为"证据不足"。
-        # 取全量命中里的最大分作除数（遍历顺序不等于分数顺序，不能用 ranked[0]）。
-        max_score = max((score for score, _ in ranked), default=0.0)
-        ranked = [(score / max_score, document) for score, document in ranked] if max_score else []
+        # 按绝对 TF-IDF 余弦排序取 top，不做 min-max 归一化：
+        # 归一化会让每家 top 证据恒为 1.0，抹平"这家到底多相关"的跨公司判别力。
+        ranked.sort(key=lambda pair: pair[0], reverse=True)
         return [
             Evidence(
                 id=document["id"],
@@ -180,5 +192,5 @@ class GraphRAGService:
                 source_url=document.get("source_url"),
                 relevance=round(score, 3),
             )
-            for score, document in sorted(ranked, key=lambda pair: pair[0], reverse=True)[:limit]
+            for score, document in ranked[:limit]
         ]

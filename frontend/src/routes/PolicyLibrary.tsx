@@ -1,5 +1,4 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import PolicyGraph from "../components/workbench/PolicyGraph";
 import {
   analyzeCatalogPolicy,
@@ -150,18 +149,12 @@ export default function PolicyLibrary() {
 
   return (
     <div className="policy-page">
-      <header className="policy-header">
-        <Link to="/" className="policy-brand">FinEcho</Link>
-        <div className="policy-header-title">
-          <strong>政策事实库</strong>
-          <span>中央—部委—地方—产业影响</span>
-        </div>
-        <nav className="policy-header-actions">
-          <button type="button" onClick={() => setImportOpen(true)}>导入 HTML</button>
-          <Link to="/workbench">产业分析</Link>
-        </nav>
-      </header>
-
+      <div className="policy-toolbar">
+        <span className="policy-toolbar-title">政策事实库</span>
+        <button type="button" onClick={() => setImportOpen(true)}>
+          导入 HTML
+        </button>
+      </div>
       <section className="policy-summary-bar">
         <div><span>政策记录</span><strong>{stats?.total ?? "—"}</strong></div>
         <div><span>正式文件</span><strong>{stats?.formal_documents ?? "—"}</strong></div>

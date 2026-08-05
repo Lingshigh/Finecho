@@ -6,6 +6,23 @@ const DEMO_POLICY = {
   text: "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
 };
 
+// 行业下拉选项，与 agent/nodes.py 的 INDUSTRY_HINT_OPTIONS 保持同步。
+const INDUSTRY_OPTIONS = [
+  "储能",
+  "光伏",
+  "新能源汽车",
+  "人工智能",
+  "半导体",
+  "机器人",
+  "低空经济",
+  "数字经济",
+  "生物医药",
+  "氢能",
+  "绿色低碳",
+  "智能航运",
+  "科技金融",
+];
+
 export default function SubmitPanel() {
   const { phase, submit, error } = useAnalysisContext();
   const [title, setTitle] = useState(DEMO_POLICY.title);
@@ -14,6 +31,7 @@ export default function SubmitPanel() {
   const [targetCompanies, setTargetCompanies] = useState("");
   const [maxDepth, setMaxDepth] = useState<1 | 2 | 3>(3);
   const [lenientMatching, setLenientMatching] = useState(false);
+  const [industryHint, setIndustryHint] = useState("");
   const disabled = phase === "submitting" || phase === "running";
 
   const onSubmit = async (e: FormEvent) => {
@@ -30,6 +48,7 @@ export default function SubmitPanel() {
       target_companies: targets,
       max_depth: maxDepth,
       lenient_matching: lenientMatching,
+      industry_hint: industryHint || null,
     });
   };
 
@@ -87,6 +106,23 @@ export default function SubmitPanel() {
                 disabled={disabled}
               />
               <span className="field-help">留空时由产业链自动匹配；指定后仅核验完全匹配的公司。</span>
+            </label>
+
+            <label className="field">
+              <span className="field-label">政策类型/行业</span>
+              <select
+                value={industryHint}
+                onChange={(e) => setIndustryHint(e.target.value)}
+                disabled={disabled}
+              >
+                <option value="">自动识别（推荐）</option>
+                {INDUSTRY_OPTIONS.map((industry) => (
+                  <option key={industry} value={industry}>
+                    {industry}
+                  </option>
+                ))}
+              </select>
+              <span className="field-help">指定后优先按该行业匹配公司，留空则从政策正文自动识别。</span>
             </label>
 
             <label className="field">

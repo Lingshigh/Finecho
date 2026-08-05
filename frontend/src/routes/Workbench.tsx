@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   AnalysisContext,
   useAnalysisContext,
@@ -41,19 +42,6 @@ export default function Workbench() {
   return (
     <AnalysisContext.Provider value={value}>
       <div className="workbench">
-        <header className="workbench-header container">
-          <a href="/" className="workbench-logo">
-            FinEcho
-          </a>
-          <nav className="workbench-actions">
-            <a className="workbench-reset" href="/policies">政策库</a>
-            {state.taskId && (
-              <button className="workbench-reset" onClick={reset}>
-                新分析
-              </button>
-            )}
-          </nav>
-        </header>
         <main className="workbench-main container">
           <SubmitPanel />
           <ProgressStream />
@@ -81,6 +69,11 @@ function Results() {
             <a className="report-link" href={reportUrl(taskId)} download>
               下载 Markdown 简报
             </a>
+          )}
+          {taskId && (
+            <Link className="report-link" to={`/report?task=${taskId}`}>
+              查看完整产业研报 →
+            </Link>
           )}
           <p className="result-summary-text">{task.result.policy_summary}</p>
           {task.result.policy_keywords.length > 0 && (
@@ -114,6 +107,13 @@ function Results() {
               </a>
             )}
           </div>
+        </div>
+      )}
+
+      {task?.result?.report && (
+        <div className="report-inline-note">
+          已生成完整产业研报，
+          <Link to={`/report?task=${taskId}`}>点击查看 →</Link>
         </div>
       )}
 

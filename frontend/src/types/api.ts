@@ -78,7 +78,59 @@ export interface AnalysisResult {
   edges: GraphEdge[];
   verdicts: Verdict[];
   warnings: string[];
+  report?: IndustryReport | null;
   generated_at: string;
+}
+
+// ---- 产业研究报告 ----
+export type ReportDimensionKey =
+  | "policy_transmission"
+  | "competition"
+  | "technology"
+  | "supply_chain";
+
+export type ReportLevel = "high" | "medium" | "low";
+
+export interface ReportRole {
+  name: string;
+  perspective: string;
+}
+
+export interface ReportDimension {
+  name: string;
+  key: ReportDimensionKey;
+  summary: string;
+  key_facts: string[];
+  sources: string[];
+}
+
+export interface ReportFrameworkRow {
+  factor: string;
+  level: ReportLevel;
+  statement: string;
+}
+
+export interface ReportFrameworkTable {
+  name: string;
+  rows: ReportFrameworkRow[];
+}
+
+export interface ReportSource {
+  label: string;
+  url?: string | null;
+  detail?: string;
+}
+
+export interface IndustryReport {
+  generated_by: "llm" | "rule";
+  role: ReportRole;
+  executive_summary: string;
+  dimensions: ReportDimension[];
+  swot?: ReportFrameworkTable | null;
+  porter_five_forces?: ReportFrameworkTable | null;
+  pest?: ReportFrameworkTable | null;
+  sources: ReportSource[];
+  model_name?: string;
 }
 
 export interface AnalysisTask {
@@ -105,6 +157,7 @@ export interface AnalysisRequest {
   target_companies?: string[];
   max_depth?: 1 | 2 | 3;
   lenient_matching?: boolean;
+  industry_hint?: string | null;
 }
 
 export interface Company {

@@ -3,10 +3,17 @@
   "configurations": [
     {
       "name": "frontend",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["node_modules/vite/bin/vite.js"],
-      "cwd": "E:\\Finecho\\frontend",
+      "cwd": "E:\\dii\\Finecho\\frontend",
       "port": 5173
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "E:\\dii\\Finecho\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"],
+      "cwd": "E:\\dii\\Finecho",
+      "port": 8001
     }
   ]
 }

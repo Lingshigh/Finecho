@@ -4,6 +4,35 @@
   color: #172033;
 }
 
+.policy-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 0;
+}
+
+.policy-toolbar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.policy-toolbar button {
+  border: 1px solid #d8dee8;
+  border-radius: 7px;
+  background: #fff;
+  padding: 8px 13px;
+  color: #334155;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.policy-toolbar button:hover {
+  border-color: #8794a8;
+  color: #172033;
+}
+
 .policy-header {
   display: grid;
   grid-template-columns: 180px 1fr auto;

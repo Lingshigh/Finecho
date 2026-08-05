@@ -39,11 +39,11 @@ def test_find_companies_graph_distance_ranks_near_first() -> None:
 
 
 def test_retrieve_uses_tfidf_cosine() -> None:
-    """retrieve 用 TF-IDF 余弦排序，最相关证据应排最前且 relevance 归一化到 [0,1]。"""
+    """retrieve 用 TF-IDF 绝对余弦排序，最相关证据应排最前且相关度落在 (0,1]。"""
     rag = GraphRAGService(Path(__file__).parents[1] / "data")
     evidence = rag.retrieve("300750.SZ", "储能电池 研发投入 出货规模")
     assert evidence
-    assert evidence[0].relevance == 1.0  # top 命中经 min-max 归一化为 1.0
+    assert 0 < evidence[0].relevance <= 1  # 绝对余弦，不做 min-max 归一化
     assert all(0 <= item.relevance <= 1 for item in evidence)
 
 
@@ -52,4 +52,60 @@ def test_retrieve_empty_when_no_match() -> None:
     rag = GraphRAGService(Path(__file__).parents[1] / "data")
     evidence = rag.retrieve("000001.DEMO", "量子计算 脑机接口 元宇宙")
     assert evidence == []
+
+
+def test_retrieve_raw_cosine_not_normalized() -> None:
+    """证据相关度是绝对 TF-IDF 余弦，不做 min-max 归一化（避免跨公司判别力被抹平）。"""
+    rag = GraphRAGService(Path(__file__).parents[1] / "data")
+    query = "储能电池 研发投入 出货规模"
+    evidence = rag.retrieve("300750.SZ", query)
+    assert evidence
+    top = evidence[0]
+    # 与手工 _cosine 一致：非归一化后 top 不应恒为 1.0。
+    assert top.relevance < 1.0
+    query_vec = rag._vectorize(query)
+    doc_vec = rag._doc_vectors[top.id]
+    assert abs(top.relevance - rag._cosine(query_vec, doc_vec)) < 1e-3
+
+
+def _write_dynamic_data(tmp_path: Path, companies: list[dict]) -> Path:
+    """在临时目录写入最小 companies.json + companies.dynamic.json。"""
+    (tmp_path / "companies.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "companies.dynamic.json").write_text(
+        __import__("json").dumps(companies, ensure_ascii=False), encoding="utf-8"
+    )
+    (tmp_path / "evidence.json").write_text("[]", encoding="utf-8")
+    return tmp_path
+
+
+def test_load_optional_dynamic_companies(tmp_path: Path) -> None:
+    """companies.dynamic.json 存在时被增量加载进公司池。"""
+    data = _write_dynamic_data(tmp_path, [
+        {
+            "id": "688981.SH",
+            "ticker": "688981.SH",
+            "name": "中芯国际",
+            "industries": ["半导体", "电子"],
+            "products": ["晶圆制造"],
+            "revenue_exposure": 0.6,
+            "rd_ratio": 0.12,
+            "capacity_constraint": "设备依赖进口",
+            "source": "akshare",
+        }
+    ])
+    rag = GraphRAGService(data)
+    assert any(c["name"] == "中芯国际" for c in rag.companies)
+    # 半导体查询应能经图召回动态公司。
+    hits = rag.find_companies(["半导体"], ["晶圆制造"])
+    assert hits
+    assert hits[0]["name"] == "中芯国际"
+    assert rag.graph.has_node("688981.SH")
+
+
+def test_load_optional_missing_file(tmp_path: Path) -> None:
+    """companies.dynamic.json 缺失时静默跳过，不抛错。"""
+    data = _write_dynamic_data(tmp_path, [])
+    (data / "companies.dynamic.json").unlink()
+    rag = GraphRAGService(data)
+    assert rag.companies == []
 

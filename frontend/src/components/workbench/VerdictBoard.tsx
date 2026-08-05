@@ -2,7 +2,7 @@ import { useAnalysisContext } from "../../contexts/AnalysisContext";
 import VerdictCard from "./VerdictCard";
 
 export default function VerdictBoard() {
-  const { phase, task } = useAnalysisContext();
+  const { phase, task, taskId } = useAnalysisContext();
   if (phase === "idle" || phase === "submitting") return null;
 
   if (phase === "failed") {
@@ -32,7 +32,7 @@ export default function VerdictBoard() {
       </div>
       <div className="verdict-grid">
         {verdicts.map((verdict) => (
-          <VerdictCard key={verdict.company_id} verdict={verdict} />
+          <VerdictCard key={verdict.company_id} verdict={verdict} taskId={taskId} />
         ))}
       </div>
     </section>
