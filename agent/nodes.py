@@ -173,23 +173,37 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
 
     def match_companies(state: AnalysisState) -> dict:
         request = state["request"]
-        companies = rag.find_companies(
-            state["industries"], state["products"], request.get("target_companies")
-        )
+        targets = request.get("target_companies")
+        industries = list(state["industries"])
+        products = list(state["products"])
+        if state.get("lenient_matching") and not targets:
+            industries = _unique([*industries, *(RELATED_INDUSTRY_RULES.get(item, item) for item in industries)])
+            products = _unique([*products, *_BROAD_PRODUCTS])
+        companies = rag.find_companies(industries, products, targets)
         return {"companies": companies}
 
     def broaden_match(state: AnalysisState) -> dict:
-        """放宽匹配条件：行业阈值降至 0.7、追加泛化供应链词；若仍无候选则全量纳入样本库兜底。"""
+        """放宽匹配条件；显式指定公司时始终保持目标约束，不退化为全量样本。"""
         previous = {company["id"]: company for company in state.get("companies", [])}
         products = _unique([*state.get("products", []), *_BROAD_PRODUCTS])
         industries = list(state.get("industries", []))
-        companies = rag.find_companies(industries, products, state["request"].get("target_companies"))
-        if not companies:
+        targets = state["request"].get("target_companies")
+        companies = rag.find_companies(industries, products, targets)
+        if not companies and not targets:
             fallback = [item for item in rag.companies if item["id"] not in previous]
             if fallback:
                 companies = fallback
         merged = _unique_ids([*previous.values(), *companies])
         changed = merged != state.get("companies", [])
+        warning = (
+            "未找到指定公司，请核对公司名称或证券代码。"
+            if targets and not merged
+            else (
+                "匹配公司较少，已放宽行业匹配条件并补充泛化供应链词后重新检索。"
+                if changed
+                else "已放宽匹配条件，仍无新增公司，已全量纳入样本库公司供核验。"
+            )
+        )
         return {
             "products": products,
             "companies": merged,
@@ -199,11 +213,7 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
             "match_attempts": state.get("match_attempts", 0) + 1,
             "warnings": [
                 *state.get("warnings", []),
-                (
-                    "匹配公司较少，已放宽行业匹配阈值并补充泛化供应链词后重新检索。"
-                    if changed
-                    else "已放宽匹配条件，仍无新增公司，已全量纳入样本库公司供核验。"
-                ),
+                warning,
             ],
         }
 

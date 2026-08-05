@@ -31,7 +31,7 @@ export function useGraph(taskId: string | null): {
       .then((data) => {
         if (cancelled) return;
         setPayload(data);
-        setLayout(layoutGraph(data.nodes));
+        setLayout(layoutGraph(data.nodes, data.edges));
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "图谱加载失败");
