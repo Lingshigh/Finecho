@@ -1,48 +1,199 @@
 [
   {
-    "id": "ev-600438-2025",
-    "company_id": "600438.SH",
-    "source_type": "demo",
-    "title": "通威股份财报摘录（演示数据）",
-    "excerpt": "高纯晶硅及太阳能电池业务构成主要收入来源，行业价格下行对盈利能力形成压力。",
-    "year": 2025,
-    "keywords": ["光伏", "高纯晶硅", "太阳能", "产能", "价格"]
-  },
-  {
-    "id": "ev-300750-2025",
+    "id": "ev-300750-1",
     "company_id": "300750.SZ",
-    "source_type": "demo",
-    "title": "宁德时代财报摘录（演示数据）",
-    "excerpt": "动力电池与储能电池系统为核心业务，研发投入及出货规模持续处于较高水平。",
+    "source_type": "annual_report",
+    "title": "2026年一季度报告",
+    "excerpt": "巨潮披露：2026年一季度报告（2026-04-16 00:00:00）",
     "year": 2025,
-    "keywords": ["储能", "动力电池", "新能源", "研发", "出货"]
+    "keywords": [
+      "储能",
+      "电池",
+      "动力电池",
+      "海外"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=300750&announcementId=1225107946&orgId=GD165627&announcementTime=2026-04-16 00:00:00"
   },
   {
-    "id": "ev-002594-2025",
+    "id": "ev-300750-2",
+    "company_id": "300750.SZ",
+    "source_type": "annual_report",
+    "title": "2025年年度报告",
+    "excerpt": "巨潮披露：2025年年度报告（2026-03-10 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "储能",
+      "电池",
+      "动力电池",
+      "海外"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=300750&announcementId=1225002214&orgId=GD165627&announcementTime=2026-03-10 00:00:00"
+  },
+  {
+    "id": "ev-300750-3",
+    "company_id": "300750.SZ",
+    "source_type": "annual_report",
+    "title": "2025年年度报告摘要",
+    "excerpt": "巨潮披露：2025年年度报告摘要（2026-03-10 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "储能",
+      "电池",
+      "动力电池",
+      "海外"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=300750&announcementId=1225002213&orgId=GD165627&announcementTime=2026-03-10 00:00:00"
+  },
+  {
+    "id": "ev-002594-1",
     "company_id": "002594.SZ",
-    "source_type": "demo",
-    "title": "比亚迪财报摘录（演示数据）",
-    "excerpt": "新能源汽车和手机部件等业务形成收入，动力电池与储能系统具备垂直整合能力。",
+    "source_type": "annual_report",
+    "title": "2026年一季度报告",
+    "excerpt": "巨潮披露：2026年一季度报告（2026-04-29 00:00:00）",
     "year": 2025,
-    "keywords": ["新能源汽车", "动力电池", "储能", "垂直整合"]
+    "keywords": [
+      "新能源汽车",
+      "电池",
+      "海外",
+      "储能"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=002594&announcementId=1225233071&orgId=gshk0001211&announcementTime=2026-04-29 00:00:00"
   },
   {
-    "id": "ev-601012-2025",
-    "company_id": "601012.SH",
-    "source_type": "demo",
-    "title": "隆基绿能财报摘录（演示数据）",
-    "excerpt": "硅片与光伏组件为主营产品，新型电池技术投入增加，但行业供需与价格存在波动。",
+    "id": "ev-002594-2",
+    "company_id": "002594.SZ",
+    "source_type": "annual_report",
+    "title": "关于召开2025年年度报告网上说明会并征集问题的公告",
+    "excerpt": "巨潮披露：关于召开2025年年度报告网上说明会并征集问题的公告（2026-03-28 00:00:00）",
     "year": 2025,
-    "keywords": ["光伏", "硅片", "组件", "电池技术", "研发"]
+    "keywords": [
+      "新能源汽车",
+      "电池",
+      "海外",
+      "储能"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=002594&announcementId=1225045372&orgId=gshk0001211&announcementTime=2026-03-28 00:00:00"
+  },
+  {
+    "id": "ev-002594-3",
+    "company_id": "002594.SZ",
+    "source_type": "annual_report",
+    "title": "2025年年度报告",
+    "excerpt": "巨潮披露：2025年年度报告（2026-03-28 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "新能源汽车",
+      "电池",
+      "海外",
+      "储能"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=002594&announcementId=1225045351&orgId=gshk0001211&announcementTime=2026-03-28 00:00:00"
+  },
+  {
+    "id": "ev-601012-1",
+    "company_id": "601012.SH",
+    "source_type": "annual_report",
+    "title": "2025年年度报告摘要",
+    "excerpt": "巨潮披露：2025年年度报告摘要（2026-04-29 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "组件",
+      "硅片",
+      "BC",
+      "单晶"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=601012&announcementId=1225251679&orgId=9900022338&announcementTime=2026-04-29 00:00:00"
+  },
+  {
+    "id": "ev-601012-2",
+    "company_id": "601012.SH",
+    "source_type": "annual_report",
+    "title": "2026年第一季度报告",
+    "excerpt": "巨潮披露：2026年第一季度报告（2026-04-29 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "组件",
+      "硅片",
+      "BC",
+      "单晶"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=601012&announcementId=1225251668&orgId=9900022338&announcementTime=2026-04-29 00:00:00"
+  },
+  {
+    "id": "ev-601012-3",
+    "company_id": "601012.SH",
+    "source_type": "annual_report",
+    "title": "2025年年度报告",
+    "excerpt": "巨潮披露：2025年年度报告（2026-04-29 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "组件",
+      "硅片",
+      "BC",
+      "单晶"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=601012&announcementId=1225251647&orgId=9900022338&announcementTime=2026-04-29 00:00:00"
+  },
+  {
+    "id": "ev-600438-1",
+    "company_id": "600438.SH",
+    "source_type": "annual_report",
+    "title": "通威股份有限公司2025年年度报告（英文版）",
+    "excerpt": "巨潮披露：通威股份有限公司2025年年度报告（英文版）（2026-06-17 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "硅料",
+      "电池片",
+      "高纯晶硅"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=600438&announcementId=1225372847&orgId=gssh0600438&announcementTime=2026-06-17 00:00:00"
+  },
+  {
+    "id": "ev-600438-2",
+    "company_id": "600438.SH",
+    "source_type": "annual_report",
+    "title": "通威股份有限公司2025年年度报告",
+    "excerpt": "巨潮披露：通威股份有限公司2025年年度报告（2026-04-30 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "硅料",
+      "电池片",
+      "高纯晶硅"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=600438&announcementId=1225259224&orgId=gssh0600438&announcementTime=2026-04-30 00:00:00"
+  },
+  {
+    "id": "ev-600438-3",
+    "company_id": "600438.SH",
+    "source_type": "annual_report",
+    "title": "通威股份有限公司2026年第一季度报告",
+    "excerpt": "巨潮披露：通威股份有限公司2026年第一季度报告（2026-04-30 00:00:00）",
+    "year": 2025,
+    "keywords": [
+      "光伏",
+      "硅料",
+      "电池片",
+      "高纯晶硅"
+    ],
+    "source_url": "http://www.cninfo.com.cn/new/disclosure/detail?stockCode=600438&announcementId=1225259198&orgId=gssh0600438&announcementTime=2026-04-30 00:00:00"
   },
   {
     "id": "ev-demo-inquiry",
     "company_id": "000001.DEMO",
-    "source_type": "demo",
+    "source_type": "inquiry",
     "title": "幻影科技问询函回复（演示数据）",
-    "excerpt": "公司相关概念业务仍处早期探索阶段，尚未形成合同订单，对当期营业收入影响低于 5%。",
+    "excerpt": "公司相关行业尚处于探索阶段，未形成合同，对主营业务影响不足 5%。",
     "year": 2025,
-    "keywords": ["概念", "尚未形成收入", "低占比", "问询函", "风险"]
+    "keywords": [
+      "人工智能",
+      "未形成收入",
+      "占比",
+      "问询函"
+    ]
   }
 ]
-

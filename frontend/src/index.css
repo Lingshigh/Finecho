@@ -1,0 +1,144 @@
+/* FinEcho 设计令牌 —— 极简主义科技风，黑白主色调 */
+:root {
+  --bg: #f7f7f5;             /* 暖灰白背景 */
+  --bg-soft: #ffffff;
+  --ink: #111111;            /* 主文字/主色 */
+  --ink-soft: #3a3a3a;
+  --ink-muted: #767676;      /* 次级文字 */
+  --line: #e5e5e2;           /* 分割线 */
+  --line-strong: #d4d4d0;
+  --radius: 8px;
+  --radius-lg: 10px;
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --max-width: 1280px;
+  --nav-h: 68px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+textarea,
+input {
+  font-family: inherit;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* ---------- 通用按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn .arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn:hover .arrow {
+  transform: translateX(4px);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #000;
+  transform: scale(1.02);
+}
+
+.btn-ghost {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.btn-ghost:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ---------- 动效 ---------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

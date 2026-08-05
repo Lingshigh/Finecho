@@ -166,7 +166,8 @@ class GraphRAGService:
                 ranked.append((relevance, document))
         # 对命中集合按最大余弦做 min-max 归一化，使每家 top 证据相关度落在可比范围，
         # 避免 TF-IDF 稀疏向量的绝对分数（普遍偏低）误判为"证据不足"。
-        max_score = ranked[0][0] if ranked else 0.0
+        # 取全量命中里的最大分作除数（遍历顺序不等于分数顺序，不能用 ranked[0]）。
+        max_score = max((score for score, _ in ranked), default=0.0)
         ranked = [(score / max_score, document) for score, document in ranked] if max_score else []
         return [
             Evidence(

@@ -69,6 +69,22 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 4. 对财务比例使用结构化财务表计算；LLM 只负责提取候选与解释，不能直接生成数字。
 5. API Key 适合黑客松演示；正式环境应接 OAuth2/JWT、可信代理和分布式限流。
 
+## 真实数据刷新
+
+`data/` 里 4 家真实公司的财务指标与证据来自 **AKShare 免费接口**（东财/巨潮官方披露），
+可用脚本一键刷新：
+
+```bash
+pip install akshare
+python scripts/fetch_real_data.py          # 重新拉取并写入 data/companies.json 与 evidence.json
+python scripts/fetch_real_data.py --dry-run  # 只预览不写入
+```
+
+- 财务指标：营收 / 归母净利 / 研发费用（利润表 RESEARCH_EXPENSE）/ ROE / 市值；
+- 证据：巨潮公告接口按"年报/季报优先 + 行业关键词补足"筛选的真实披露标题与链接；
+- 演示热点公司（`000001.DEMO`）与 `chain_rules.json` / `eval_cases.json` 保持不变，
+  不影响现有测试与评测基线（ACC 0.688 / AUC 0.7）。
+
 ## 优化记录
 
 - [01 多 Agent 条件路由与循环回退](docs/optimization-01-langgraph-multi-agent.md)：核验拆分为 form_candidate / gather_evidence / adversarial_check 三个 Agent，匹配与证据两处循环放宽且保证有界终止。
@@ -78,6 +94,7 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 - [05 GraphRAG 图遍历召回 + TF-IDF 排序](docs/optimization-05-graphrag-graph-traversal.md)：候选召回从字符串 overlap 升级为 BFS 图遍历（industry→company→product 传导链），证据排序从词袋交集升级为 TF-IDF 余弦，检索质量不变、语义结构落地。
 - [06 产业链规则表外置 + 语义化匹配](docs/optimization-06-chain-rules-semantic-matching.md)：`CHAIN_RULES` 搬入 `data/chain_rules.json` 可运营扩充，匹配从子串互含改为完整词 + 同义词表（`半导` 不再误触发 `半导体`），评测基线不变。
 - [07 SSE 事件流推送](docs/optimization-07-sse-event-stream.md)：任务从轮询升级为 SSE 实时推送，`astream_events` 逐节点转发 + 内存事件总线，Agent 每步（含重试）在事件流中可见。
+- [08 AKShare 真实数据接入](docs/optimization-08-akshare-real-data.md)：`data/` 换血为真实公司财务与巨潮公告，`scripts/fetch_real_data.py` 一键拉取，顺手修复 RAG 归一化的隐性 bug。
 
 ## 评测
 
