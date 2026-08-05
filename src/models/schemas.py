@@ -94,6 +94,26 @@ class TaskAccepted(BaseModel):
     task_id: str
     status: TaskStatus
     poll_url: str
+    events_url: str = ""
+
+
+class NodeEvent(BaseModel):
+    """Agent 单步执行事件：节点开始/结束，携带任务进度与面向展示的说明文本。
+
+    - `type` 形如 `node_extract_policy_start` / `node_extract_policy_end`；
+    - `node` / `label` 分别给出内部节点名与中文展示名；
+    - `progress.completed` 为已结束的节点列表（保留执行顺序），`total` 为全图节点数；
+    - `attempt` 为同一节点在重试循环中第几次执行（从 1 开始）。
+    """
+
+    task_id: str
+    type: str
+    node: str
+    label: str = ""
+    attempt: int = 1
+    detail: str = ""
+    progress: dict[str, object] = Field(default_factory=dict)
+    at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ApiError(BaseModel):

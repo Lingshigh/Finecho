@@ -33,8 +33,9 @@ pip install -e ".[dev,llm]"
 | 方法 | 路径 | 用途 |
 |---|---|---|
 | `GET` | `/health`、`/ready` | 存活/就绪检查 |
-| `POST` | `/api/v1/analyses` | 提交政策分析，返回任务 ID |
+| `POST` | `/api/v1/analyses` | 提交政策分析，返回任务 ID 与事件流地址 |
 | `GET` | `/api/v1/analyses/{task_id}` | 查询任务状态和结果 |
+| `GET` | `/api/v1/analyses/{task_id}/events` | SSE 事件流：Agent 每步进度实时推送 |
 | `GET` | `/api/v1/analyses/{task_id}/result` | 只读取完成结果 |
 | `GET` | `/api/v1/graphs/{task_id}` | 获取前端图谱的 nodes/edges |
 | `GET` | `/api/v1/companies/{id}` | 获取公司基本面样例 |
@@ -76,6 +77,7 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 - [04 实现 max_depth 控制链条层数](docs/optimization-04-max-depth.md)：`max_depth` 控制图谱展示层级（1=政策+行业，2=+供应链，3=完整链路），分析与核验始终用全量数据，不同 depth 下判定一致。
 - [05 GraphRAG 图遍历召回 + TF-IDF 排序](docs/optimization-05-graphrag-graph-traversal.md)：候选召回从字符串 overlap 升级为 BFS 图遍历（industry→company→product 传导链），证据排序从词袋交集升级为 TF-IDF 余弦，检索质量不变、语义结构落地。
 - [06 产业链规则表外置 + 语义化匹配](docs/optimization-06-chain-rules-semantic-matching.md)：`CHAIN_RULES` 搬入 `data/chain_rules.json` 可运营扩充，匹配从子串互含改为完整词 + 同义词表（`半导` 不再误触发 `半导体`），评测基线不变。
+- [07 SSE 事件流推送](docs/optimization-07-sse-event-stream.md)：任务从轮询升级为 SSE 实时推送，`astream_events` 逐节点转发 + 内存事件总线，Agent 每步（含重试）在事件流中可见。
 
 ## 评测
 
