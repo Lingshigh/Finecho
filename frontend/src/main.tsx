@@ -5,6 +5,7 @@ import App from "./App";
 import "./index.css";
 import "./workbench.css";
 import "./landing.css";
+import "./policy.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -273,3 +273,36 @@ def test_chain_rule_synonym_matching() -> None:
     # 无关词不命中任何规则，避免噪音。
     industries, products = match_chain_rules(["量子计算"], rules)
     assert industries == [] and products == []
+
+
+def test_lenient_matching_expands_initial_candidates() -> None:
+    """宽松匹配开关应在首次召回时扩展相关行业，而不是成为无效参数。"""
+    from agent.nodes import build_nodes
+
+    rag = _make_rag()
+    nodes = build_nodes(rag, OptionalPolicyLLM(api_key="", model="gpt-4.1-mini"))
+    base = {
+        "request": {"target_companies": []},
+        "industries": ["储能"],
+        "products": [],
+        "lenient_matching": False,
+    }
+    strict = nodes["match_companies"](base)["companies"]
+    lenient = nodes["match_companies"]({**base, "lenient_matching": True})["companies"]
+
+    assert {item["id"] for item in strict} < {item["id"] for item in lenient}
+
+
+def test_unknown_explicit_target_does_not_fall_back_to_all_companies() -> None:
+    state = _run_graph(
+        _make_rag(),
+        request={
+            "policy_title": "新型储能示范政策",
+            "policy_text": "支持新型储能项目建设，推动储能电池、电池管理系统及新能源产业发展。",
+            "target_companies": ["不存在的公司"],
+        },
+    )
+
+    assert state["companies"] == []
+    assert state["verdicts"] == []
+    assert any("未找到指定公司" in warning for warning in state["warnings"])

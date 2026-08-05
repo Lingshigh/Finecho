@@ -7,6 +7,7 @@ import {
 import { useAnalysis } from "../hooks/useAnalysis";
 import { useGraph } from "../hooks/useGraph";
 import SubmitPanel from "../components/workbench/SubmitPanel";
+import { reportUrl } from "../lib/http";
 import ProgressStream from "../components/workbench/ProgressStream";
 import GraphCanvas from "../components/workbench/GraphCanvas";
 import VerdictBoard from "../components/workbench/VerdictBoard";
@@ -44,11 +45,14 @@ export default function Workbench() {
           <a href="/" className="workbench-logo">
             FinEcho
           </a>
-          {state.taskId && (
-            <button className="workbench-reset" onClick={reset}>
-              新分析
-            </button>
-          )}
+          <nav className="workbench-actions">
+            <a className="workbench-reset" href="/policies">政策库</a>
+            {state.taskId && (
+              <button className="workbench-reset" onClick={reset}>
+                新分析
+              </button>
+            )}
+          </nav>
         </header>
         <main className="workbench-main container">
           <SubmitPanel />
@@ -65,6 +69,7 @@ function Results() {
   const graph = useGraph(phase === "complete" ? taskId : null);
   const verdicts = task?.result?.verdicts ?? [];
 
+  if (phase === "failed") return <VerdictBoard />;
   if (phase !== "complete") return null;
 
   return (
@@ -72,6 +77,11 @@ function Results() {
       {task?.result && (
         <div className="result-summary">
           <h2 className="section-title">分析结果</h2>
+          {taskId && (
+            <a className="report-link" href={reportUrl(taskId)} download>
+              下载 Markdown 简报
+            </a>
+          )}
           <p className="result-summary-text">{task.result.policy_summary}</p>
           {task.result.policy_keywords.length > 0 && (
             <div className="result-keywords">
@@ -82,6 +92,28 @@ function Results() {
               ))}
             </div>
           )}
+          {task.result.warnings.length > 0 && (
+            <div className="result-warnings">
+              <strong>风险提示</strong>
+              <ul>
+                {task.result.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="result-meta">
+            <span>生成于 {new Date(task.result.generated_at).toLocaleString("zh-CN")}</span>
+            {task.request.source_url && (
+              <a
+                href={task.request.source_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                查看政策来源
+              </a>
+            )}
+          </div>
         </div>
       )}
 

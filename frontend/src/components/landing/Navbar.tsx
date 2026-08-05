@@ -29,6 +29,9 @@ export default function Navbar() {
           <Link to="/#features" className="nav-link">
             研究
           </Link>
+          <Link to="/policies" className="nav-link">
+            政策库
+          </Link>
           <Link to="/workbench" className="nav-link">
             联系我们
           </Link>

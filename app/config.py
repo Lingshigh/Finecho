@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
+    policy_agents_enabled: bool = True
+    policy_agent_timeout_seconds: float = Field(default=30, ge=1, le=120)
     chroma_persist_dir: str = "data/chroma"
     rate_limit_requests: int = Field(default=60, ge=1)
     rate_limit_window_seconds: int = Field(default=60, ge=1)
@@ -24,6 +26,10 @@ class Settings(BaseSettings):
     allowed_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5175",
+        "http://127.0.0.1:5176",
     ]
 
     @field_validator("allowed_origins", mode="before")
