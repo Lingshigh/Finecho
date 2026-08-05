@@ -75,6 +75,7 @@ curl -X POST http://localhost:8000/api/v1/analyses \
 - [03 核验评测基准](docs/optimization-03-evaluation-benchmark.md)：标注数据集 + 评测脚本，输出混淆矩阵 / per-class 指标 / hotspot AUC（当前基线 ACC 0.688、AUC 0.7）。
 - [04 实现 max_depth 控制链条层数](docs/optimization-04-max-depth.md)：`max_depth` 控制图谱展示层级（1=政策+行业，2=+供应链，3=完整链路），分析与核验始终用全量数据，不同 depth 下判定一致。
 - [05 GraphRAG 图遍历召回 + TF-IDF 排序](docs/optimization-05-graphrag-graph-traversal.md)：候选召回从字符串 overlap 升级为 BFS 图遍历（industry→company→product 传导链），证据排序从词袋交集升级为 TF-IDF 余弦，检索质量不变、语义结构落地。
+- [06 产业链规则表外置 + 语义化匹配](docs/optimization-06-chain-rules-semantic-matching.md)：`CHAIN_RULES` 搬入 `data/chain_rules.json` 可运营扩充，匹配从子串互含改为完整词 + 同义词表（`半导` 不再误触发 `半导体`），评测基线不变。
 
 ## 评测
 

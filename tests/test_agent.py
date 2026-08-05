@@ -230,3 +230,46 @@ async def test_adversarial_check_llm_challenge_lowers_score() -> None:
     # LLM 质疑宁德时代后，其受益概率应被拉低，且 reasoning 中带 LLM 立场说明。
     assert by_id["300750.SZ"].benefit_probability < blend_scores(0.9, None) + 0.05
     assert any("LLM 事实核查" in r for r in by_id["300750.SZ"].reasons)
+
+
+def test_chain_rules_load_from_json() -> None:
+    """规则表应从 data/chain_rules.json 加载且可扩充。"""
+    from agent.nodes import load_chain_rules
+
+    rules = load_chain_rules(DATA_DIR)
+    assert rules
+    assert "半导体" in rules
+    assert "光伏" in rules
+    # 每条规则含触发词、行业、供应链节点三要素。
+    for rule in rules.values():
+        assert rule["keywords"]
+        assert rule["industries"]
+        assert rule["products"]
+
+
+def test_chain_rule_full_word_match_not_substring() -> None:
+    """完整词匹配，禁止子串互含：'半导' 不应误触发 '半导体'。"""
+    from agent.nodes import load_chain_rules, match_chain_rules
+
+    rules = load_chain_rules(DATA_DIR)
+    industries, products = match_chain_rules(["半导"], rules)
+    assert industries == []
+    assert products == []
+    # 完整词 '半导体' 应正常触发。
+    industries, products = match_chain_rules(["半导体"], rules)
+    assert "半导体" in industries
+    assert products
+
+
+def test_chain_rule_synonym_matching() -> None:
+    """同义词/别名应命中对应规则：'电池' 触发储能，'芯片' 触发半导体。"""
+    from agent.nodes import load_chain_rules, match_chain_rules
+
+    rules = load_chain_rules(DATA_DIR)
+    industries, products = match_chain_rules(["电池"], rules)
+    assert "储能" in industries
+    industries, products = match_chain_rules(["芯片"], rules)
+    assert "半导体" in industries
+    # 无关词不命中任何规则，避免噪音。
+    industries, products = match_chain_rules(["量子计算"], rules)
+    assert industries == [] and products == []

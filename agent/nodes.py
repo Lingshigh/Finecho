@@ -1,24 +1,14 @@
 import asyncio
+import json
 import re
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from agent.llm import OptionalPolicyLLM
 from agent.state import AnalysisState
 from src.models.schemas import CompanyCandidate, CompanyVerdict, GraphEdge, GraphNode
 from src.services.rag_service import GraphRAGService
-
-CHAIN_RULES: dict[str, tuple[list[str], list[str]]] = {
-    "光伏": (["光伏", "新能源"], ["高纯晶硅", "硅片", "电池片", "光伏组件", "逆变器"]),
-    "储能": (["储能", "新能源"], ["锂资源", "储能电池", "电池管理系统", "储能系统"]),
-    "新能源汽车": (
-        ["新能源汽车", "汽车零部件"],
-        ["锂资源", "动力电池", "电机电控", "整车"],
-    ),
-    "人工智能": (["人工智能", "软件服务"], ["算力芯片", "服务器", "大模型", "行业应用"]),
-    "半导体": (["半导体", "电子"], ["材料", "设备", "芯片设计", "晶圆制造", "封装测试"]),
-    "机器人": (["机器人", "高端制造"], ["减速器", "伺服系统", "控制器", "本体", "系统集成"]),
-}
 
 # 宽松匹配使用的泛化产品词，覆盖供应链上中下游，保证每次放宽查询都会新增候选。
 _BROAD_PRODUCTS = [
@@ -30,8 +20,9 @@ _BROAD_PRODUCTS = [
     "技术服务",
 ]
 
+# 规则触发后，把规则主行业映射为更宽泛的兜底行业（用于 broaden_match 时的泛化）。
 RELATED_INDUSTRY_RULES = {
-    "新能源": "政策相关产业",
+    "光伏": "新能源",
     "储能": "新能源",
     "新能源汽车": "汽车零部件",
     "人工智能": "软件服务",
@@ -86,6 +77,32 @@ def _visible_levels(max_depth: int) -> set[int]:
     return {level for level in range(max_depth + 1)}
 
 
+def load_chain_rules(data_dir: Path) -> dict[str, dict]:
+    """从 data/chain_rules.json 加载产业链规则表；文件缺失时返回空表（仅靠正则兜底）。"""
+    rules_path = data_dir / "chain_rules.json"
+    if not rules_path.exists():
+        return {}
+    with rules_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    return {rule["name"]: rule for rule in payload["rules"]}
+
+
+def match_chain_rules(
+    keywords: list[str], rules: dict[str, dict]
+) -> tuple[list[str], list[str]]:
+    """语义化匹配：规范化关键词后与规则关键词做完整词比对（含同义词），不做子串互含。"""
+    industries: list[str] = []
+    products: list[str] = []
+    for keyword in keywords:
+        normalized = keyword.strip().lower()
+        for rule in rules.values():
+            if normalized in {k.strip().lower() for k in rule["keywords"]}:
+                industries.extend(rule["industries"])
+                products.extend(rule["products"])
+                break
+    return _unique(industries), _unique(products)
+
+
 def route_match(state: AnalysisState) -> str:
     """没有匹配到公司且还有重试次数时，回退到 broaden_match 循环；否则继续验证。"""
     if not state.get("companies") and state.get("match_attempts", 0) < state.get(
@@ -118,6 +135,9 @@ def route_evidence(state: AnalysisState) -> str:
 
 
 def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Callable]:
+    # 产业链规则从 data/chain_rules.json 加载，可按需扩充而无需改代码。
+    chain_rules = load_chain_rules(rag.data_dir)
+
     async def extract_policy(state: AnalysisState) -> dict:
         request = state["request"]
         parsed = await llm.parse(request["policy_title"], request["policy_text"])
@@ -130,7 +150,9 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
             }
 
         text = f"{request['policy_title']} {request['policy_text']}"
-        matched = [keyword for keyword in CHAIN_RULES if keyword in text]
+        # 规则触发词（含同义词）全文匹配；优先用规则名/触发词，避免对政策标题做正则抓词产生噪音。
+        trigger_words = [word for rule in chain_rules.values() for word in rule["keywords"]]
+        matched = [word for word in trigger_words if word in text]
         keywords = matched or re.findall(r"[一-鿿]{2,8}", request["policy_title"])[:5]
         summary = re.sub(r"\s+", " ", request["policy_text"]).strip()[:180]
         return {"policy_summary": summary, "policy_keywords": _unique(keywords)}
@@ -138,11 +160,11 @@ def build_nodes(rag: GraphRAGService, llm: OptionalPolicyLLM) -> dict[str, Calla
     def expand_chain(state: AnalysisState) -> dict:
         industries = list(state.get("industries", []))
         products = list(state.get("products", []))
-        for keyword in state["policy_keywords"]:
-            for rule_key, (rule_industries, rule_products) in CHAIN_RULES.items():
-                if rule_key in keyword or keyword in rule_key:
-                    industries.extend(rule_industries)
-                    products.extend(rule_products)
+        matched_industries, matched_products = match_chain_rules(
+            state["policy_keywords"], chain_rules
+        )
+        industries.extend(matched_industries)
+        products.extend(matched_products)
         if not industries:
             industries = ["政策相关产业"]
         if not products:
