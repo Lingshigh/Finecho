@@ -3,6 +3,9 @@ import type {
   AnalysisTask,
   GraphPayload,
   Company,
+  PolicyAgentAnalysisResponse,
+  PolicyAgentStatus,
+  PolicyDocumentImportPayload,
   PolicyImportPayload,
   PolicyImportResult,
   PolicyLineage,
@@ -96,6 +99,20 @@ export function importPolicyHtml(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+export function importPolicyDocument(
+  payload: PolicyDocumentImportPayload
+): Promise<PolicyAgentAnalysisResponse> {
+  return request<PolicyAgentAnalysisResponse>("/api/v1/policy-imports/document", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchPolicyAgentStatus(): Promise<PolicyAgentStatus> {
+  return request<PolicyAgentStatus>("/api/v1/policy-agents/status");
 }
 
 export function analyzeCatalogPolicy(policyId: string): Promise<TaskAccepted> {
