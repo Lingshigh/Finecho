@@ -436,6 +436,82 @@
 .policy-dialog-actions button[type="submit"] { border-color: #334155; background: #334155; color: #fff; }
 .policy-dialog-actions button:disabled { opacity: 0.6; }
 
+/* ---- 正文导入对话框 ---- */
+.policy-import-dialog textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid #d8dee8;
+  border-radius: 7px;
+  background: #f8fafc;
+  padding: 9px 10px;
+  color: #1e293b;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+  outline: none;
+}
+.policy-import-dialog textarea:focus {
+  border-color: #64748b;
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+}
+.policy-document-persist {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px !important;
+}
+.policy-document-persist input {
+  width: auto;
+  margin: 0;
+}
+.policy-document-persist small {
+  color: #8994a6;
+  font-size: 9px;
+}
+
+/* ---- Agent 状态徽标 ---- */
+.policy-summary-bar strong.agent-online { color: #059669; }
+
+/* ---- 正文条款列表 ---- */
+.policy-clause-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: clause;
+}
+.policy-clause-list > li {
+  position: relative;
+  border-left: 3px solid #bfdbfe;
+  border-radius: 0 6px 6px 0;
+  background: #f8fbff;
+  padding: 8px 10px 8px 28px;
+}
+.policy-clause-list > li::before {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  color: #2563eb;
+  font-size: 9px;
+  font-weight: 800;
+  counter-increment: clause;
+  content: counter(clause);
+}
+.policy-clause-list strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #334155;
+  font-size: 10px;
+}
+.policy-clause-list p {
+  margin: 0;
+  color: #475569;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
 @media (max-width: 1180px) {
   .policy-workspace { grid-template-columns: 260px minmax(430px, 1fr) 310px; }
   .policy-summary-bar { grid-template-columns: repeat(5, 1fr); }
