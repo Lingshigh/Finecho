@@ -343,6 +343,29 @@ export interface PolicyStats {
   local_documents: number;
 }
 
+export interface PolicyDocumentImportPayload {
+  title: string;
+  content: string;
+  source_name: string;
+  authority_name: string;
+  source_url?: string;
+  default_authority_level: AuthorityLevel;
+  persist: boolean;
+}
+
+export interface PolicyAgentAnalysisResponse {
+  document: PolicyDocument;
+  relations: PolicyRelation[];
+  persisted: boolean;
+}
+
+export interface PolicyAgentStatus {
+  enabled: boolean;
+  llm_configured: boolean;
+  execution_strategy: string;
+  agents: PolicyAgentName[];
+}
+
 export interface PolicyImportPayload {
   source_name: string;
   authority_name: string;

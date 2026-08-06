@@ -3,13 +3,18 @@ import PolicyGraph from "../components/workbench/PolicyGraph";
 import {
   analyzeCatalogPolicy,
   fetchPolicies,
+  fetchPolicyAgentStatus,
   fetchPolicyLineage,
   fetchPolicyStats,
+  importPolicyDocument,
   importPolicyHtml,
 } from "../lib/http";
 import type {
   AuthorityLevel,
+  PolicyAgentAnalysisResponse,
+  PolicyAgentStatus,
   PolicyDocument,
+  PolicyDocumentImportPayload,
   PolicyImportResult,
   PolicyLineage,
   PolicyListResponse,
@@ -75,7 +80,9 @@ export default function PolicyLibrary() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
+  const [documentImportOpen, setDocumentImportOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<PolicyAgentStatus | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +112,10 @@ export default function PolicyLibrary() {
   useEffect(() => {
     fetchPolicyStats().then(setStats).catch(() => undefined);
   }, [reloadKey]);
+
+  useEffect(() => {
+    fetchPolicyAgentStatus().then(setAgentStatus).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!selectedId) {
@@ -149,18 +160,26 @@ export default function PolicyLibrary() {
 
   return (
     <div className="policy-page">
-      <div className="policy-toolbar">
-        <span className="policy-toolbar-title">政策事实库</span>
-        <button type="button" onClick={() => setImportOpen(true)}>
-          导入 HTML
-        </button>
-      </div>
+      <header className="policy-header">
+        <Link to="/" className="policy-brand">FinEcho</Link>
+        <div className="policy-header-title">
+          <strong>政策事实库</strong>
+          <span>中央—部委—地方—产业影响</span>
+        </div>
+        <nav className="policy-header-actions">
+          <button type="button" onClick={() => setImportOpen(true)}>导入 HTML</button>
+          <button type="button" onClick={() => setDocumentImportOpen(true)}>导入正文</button>
+          <Link to="/workbench">产业分析</Link>
+        </nav>
+      </header>
+
       <section className="policy-summary-bar">
         <div><span>政策记录</span><strong>{stats?.total ?? "—"}</strong></div>
         <div><span>正式文件</span><strong>{stats?.formal_documents ?? "—"}</strong></div>
         <div><span>中央依据</span><strong>{stats?.central_documents ?? "—"}</strong></div>
         <div><span>地方政策</span><strong>{stats?.local_documents ?? "—"}</strong></div>
         <div><span>待人工复核</span><strong>{stats?.pending_review ?? "—"}</strong></div>
+        <div><span>AI Agent</span><strong className={agentStatus?.llm_configured ? "agent-online" : ""}>{agentStatus ? (agentStatus.llm_configured ? "模型增强" : "规则模式") : "…"}</strong></div>
         <p>影响结论均保留原文证据与置信度；索引样本不等同于已核验正文。</p>
       </section>
 
@@ -332,10 +351,44 @@ export default function PolicyLibrary() {
                 <ScopeRow label="地域" values={selected.scope.regions} />
                 <ScopeRow label="行业" values={selected.scope.industries} />
                 <ScopeRow label="适用主体" values={selected.scope.target_entities} />
+                <ScopeRow label="项目阶段" values={selected.scope.project_stages} />
+                <ScopeRow label="准入条件" values={selected.scope.conditions} />
+                <ScopeRow label="排除项" values={selected.scope.exclusions} />
+                <div className="policy-scope-row">
+                  <span>有效期</span>
+                  <div>
+                    {selected.scope.valid_from || selected.scope.valid_until ? (
+                      <em>
+                        {selected.scope.valid_from ? formatDate(selected.scope.valid_from) : "待核验"}
+                        {" — "}
+                        {selected.scope.valid_until ? formatDate(selected.scope.valid_until) : "待核验"}
+                      </em>
+                    ) : (
+                      <small>待正文核验</small>
+                    )}
+                  </div>
+                </div>
                 {selected.scope.evidence[0] && (
                   <blockquote>{selected.scope.evidence[0].excerpt}</blockquote>
                 )}
               </section>
+
+              {selected.clauses.length > 0 && (
+                <section className="policy-detail-section">
+                  <div className="policy-detail-title">
+                    <h2>正文条款</h2>
+                    <span>{selected.clauses.length} 条 · 文档识别 Agent 拆分</span>
+                  </div>
+                  <ol className="policy-clause-list">
+                    {selected.clauses.map((clause) => (
+                      <li key={clause.id}>
+                        {clause.heading && <strong>{clause.heading}</strong>}
+                        <p>{clause.text}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
 
               <section className="policy-detail-section">
                 <div className="policy-detail-title">
@@ -376,6 +429,16 @@ export default function PolicyLibrary() {
           onClose={() => setImportOpen(false)}
           onImported={() => {
             setImportOpen(false);
+            setReloadKey((value) => value + 1);
+          }}
+        />
+      )}
+
+      {documentImportOpen && (
+        <DocumentImportDialog
+          onClose={() => setDocumentImportOpen(false)}
+          onImported={() => {
+            setDocumentImportOpen(false);
             setReloadKey((value) => value + 1);
           }}
         />
@@ -450,6 +513,76 @@ function ImportDialog({
         <div className="policy-dialog-actions">
           <button type="button" onClick={onClose}>取消</button>
           <button type="submit" disabled={submitting}>{submitting ? "正在清洗…" : "导入并清洗"}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function DocumentImportDialog({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: (result: PolicyAgentAnalysisResponse) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [sourceName, setSourceName] = useState("政策原文聚合中心");
+  const [authorityName, setAuthorityName] = useState("");
+  const [authorityLevel, setAuthorityLevel] = useState<AuthorityLevel>("ministry");
+  const [persist, setPersist] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const payload: PolicyDocumentImportPayload = {
+        title,
+        content,
+        source_name: sourceName,
+        authority_name: authorityName,
+        default_authority_level: authorityLevel,
+        persist,
+      };
+      const result = await importPolicyDocument(payload);
+      onImported(result);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "导入失败");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="policy-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <form className="policy-import-dialog" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="policy-dialog-head">
+          <div><strong>导入政策正文</strong><span>四 Agent 识别文档、提取范围、分析影响并推理关系</span></div>
+          <button type="button" onClick={onClose} aria-label="关闭">×</button>
+        </div>
+        <label><span>政策标题</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：关于支持储能产业发展的通知" required minLength={2} maxLength={300} /></label>
+        <label><span>政策正文</span><textarea className="policy-document-textarea" value={content} onChange={(event) => setContent(event.target.value)} rows={10} placeholder="粘贴政策完整正文，包含文号、条款与适用范围…" required minLength={20} /></label>
+        <label><span>来源名称</span><input value={sourceName} onChange={(event) => setSourceName(event.target.value)} required minLength={2} /></label>
+        <label><span>发文机关</span><input value={authorityName} onChange={(event) => setAuthorityName(event.target.value)} placeholder="例如：国家能源局" required minLength={2} /></label>
+        <label>
+          <span>默认层级</span>
+          <select value={authorityLevel} onChange={(event) => setAuthorityLevel(event.target.value as AuthorityLevel)}>
+            {Object.entries(LEVEL_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label className="policy-document-persist">
+          <span>写入政策库</span>
+          <input type="checkbox" checked={persist} onChange={(event) => setPersist(event.target.checked)} />
+          <small>勾选后结果入库并供目录查询；取消则仅预览不保存</small>
+        </label>
+        <p className="policy-import-note">Agent 结论默认为机器候选，所有范围、影响与关系均保留原文证据；证据无法复现时自动回退规则并记录 warning。</p>
+        {error && <p className="policy-dialog-error">{error}</p>}
+        <div className="policy-dialog-actions">
+          <button type="button" onClick={onClose}>取消</button>
+          <button type="submit" disabled={submitting || title.length < 2 || content.length < 20}>{submitting ? "Agent 分析中…" : "运行四 Agent 导入"}</button>
         </div>
       </form>
     </div>
