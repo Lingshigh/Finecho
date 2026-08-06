@@ -160,6 +160,41 @@ def test_rule_score_penalizes_low_exposure() -> None:
     assert legit >= 0.7
 
 
+def test_rule_score_product_overlap_dominates() -> None:
+    """产品是否命中政策传导链是主导信号：宁德在光伏政策（无交集）达不到 high_confidence 带，
+    而产品命中（交集）时即便证据相关度低也能判高置信。"""
+    from agent.nodes import rule_score
+
+    pv_catl = rule_score(exposure=0.85, rd_ratio=0.052, relevance=0.03,
+                         product_overlap=False, has_evidence=True)
+    assert pv_catl < 0.7  # 高暴露但产品不命中 → 不再被撑成 high_confidence
+    with_overlap = rule_score(exposure=0.85, rd_ratio=0.052, relevance=0.03,
+                              product_overlap=True, has_evidence=True)
+    assert with_overlap >= 0.7
+
+
+def test_rule_score_industry_overlap_lifts() -> None:
+    """行业交集是弱正向信号：无产品交集但有行业交集时落入 watch 带，
+    与"产品、行业都无交集"（热点）区分开。"""
+    from agent.nodes import rule_score
+
+    industry_only = rule_score(exposure=0.80, rd_ratio=0.013, relevance=0.03,
+                               product_overlap=False, has_evidence=True, industry_overlap=True)
+    assert 0.4 <= industry_only < 0.7  # watch 形态（如通威在储能政策）
+    none_overlap = rule_score(exposure=0.80, rd_ratio=0.013, relevance=0.03,
+                              product_overlap=False, has_evidence=True, industry_overlap=False)
+    assert none_overlap < industry_only
+
+
+def test_divergence_independent_of_score() -> None:
+    """背离度不应是受益概率的镜像：产品交集/证据不同 → 背离度不同。"""
+    state = _run_graph(_make_rag())
+    verdicts = {v.company_id: v for v in state["verdicts"]}
+    # 储能政策下宁德（产品交集）背离度应低，幻影（无交集）应高。
+    assert verdicts["300750.SZ"].divergence_score < 0.4
+    assert verdicts["000001.DEMO"].divergence_score >= 0.7
+
+
 def test_blend_scores_llm_challenge_lowers_rule_score() -> None:
     from agent.nodes import blend_scores
 
@@ -219,16 +254,20 @@ async def test_adversarial_check_llm_support_raises_score() -> None:
     # 幻影科技暴露度极低，即使 LLM 支持也应保持热点风险。
     by_id = {v.company_id: v for v in result["verdicts"]}
     assert by_id["000001.DEMO"].verdict == "hotspot_risk"
+    # LLM 支持应比无 LLM 基线拉高受益概率。
+    no_llm = await _run_with_stub_llm(_StubLLM("neutral"))
+    baseline = {v.company_id: v for v in no_llm["verdicts"]}
+    assert by_id["300750.SZ"].benefit_probability > baseline["300750.SZ"].benefit_probability
 
 
 async def test_adversarial_check_llm_challenge_lowers_score() -> None:
-    from agent.nodes import blend_scores
-
     result = await _run_with_stub_llm(_StubLLM("challenge"))
     assert result["verdicts"]
     by_id = {v.company_id: v for v in result["verdicts"]}
-    # LLM 质疑宁德时代后，其受益概率应被拉低，且 reasoning 中带 LLM 立场说明。
-    assert by_id["300750.SZ"].benefit_probability < blend_scores(0.9, None) + 0.05
+    # LLM 质疑宁德时代后，其受益概率应比无 LLM 基线更低，且 reasoning 中带 LLM 立场说明。
+    no_llm = await _run_with_stub_llm(_StubLLM("neutral"))
+    baseline = {v.company_id: v for v in no_llm["verdicts"]}
+    assert by_id["300750.SZ"].benefit_probability < baseline["300750.SZ"].benefit_probability
     assert any("LLM 事实核查" in r for r in by_id["300750.SZ"].reasons)
 
 

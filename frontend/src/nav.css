@@ -1,0 +1,59 @@
+/* 全局常驻顶部导航栏：sticky 常驻，点击切换选中态（变浅 + 半透明）。 */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(247, 247, 245, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.app-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--nav-h);
+}
+
+.app-nav-logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.app-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: color 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.app-nav-link:hover {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* 选中项：颜色变浅 + 透明度降低，其余导航项保持正常显示。 */
+.app-nav-link.active {
+  color: #a3a3a3;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .app-nav-link {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}

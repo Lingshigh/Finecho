@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { Company, Verdict } from "../../types/api";
 import { fetchCompany } from "../../lib/http";
 
@@ -11,7 +12,20 @@ const VERDICT_META: Record<
   hotspot_risk: { label: "蹭热点风险", hint: "无实质业务，警惕炒作" },
 };
 
-export default function VerdictCard({ verdict }: { verdict: Verdict }) {
+// 蹭热点风险分级：≥0.7 高（红）、≥0.4 中（琥珀）、其余低（灰）。
+function riskMeterClass(divergence: number): string {
+  if (divergence >= 0.7) return "meter-fill meter-fill-risk";
+  if (divergence >= 0.4) return "meter-fill meter-fill-warn";
+  return "meter-fill meter-fill-safe";
+}
+
+export default function VerdictCard({
+  verdict,
+  taskId,
+}: {
+  verdict: Verdict;
+  taskId?: string | null;
+}) {
   const meta = VERDICT_META[verdict.verdict];
   const prob = Math.round(verdict.benefit_probability * 100);
   const [company, setCompany] = useState<Company | null>(null);
@@ -38,6 +52,12 @@ export default function VerdictCard({ verdict }: { verdict: Verdict }) {
         <span className="verdict-badge">{meta.label}</span>
       </header>
 
+      {taskId && (
+        <Link className="verdict-report-link" to={`/report?task=${taskId}`}>
+          产业研究报告 →
+        </Link>
+      )}
+
       <p className="verdict-hint">{meta.hint}</p>
 
       <div className="verdict-meter">
@@ -52,12 +72,12 @@ export default function VerdictCard({ verdict }: { verdict: Verdict }) {
           />
         </div>
         <div className="meter-label">
-          <span>背离度</span>
+          <span>蹭热点风险</span>
           <span>{Math.round(verdict.divergence_score * 100)}%</span>
         </div>
         <div className="meter-track">
           <div
-            className="meter-fill meter-fill-dim"
+            className={riskMeterClass(verdict.divergence_score)}
             style={{ width: `${Math.round(verdict.divergence_score * 100)}%` }}
           />
         </div>

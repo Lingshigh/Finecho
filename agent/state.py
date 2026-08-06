@@ -22,3 +22,4 @@ class AnalysisState(TypedDict, total=False):
     max_match_attempts: int
     max_evidence_attempts: int
     lenient_matching: bool
+    report: Any = None

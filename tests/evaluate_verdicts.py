@@ -119,8 +119,9 @@ async def _evaluate() -> dict:
         actual.append(exp)
         predicted.append(pred)
         binary_actual.append(1 if exp in HOTSPOT_POSITIVE else 0)
-        # 对 hotspot 正类输出概率越大越好，负类（high_confidence）输出 1-p。
-        hotspot_scores.append(score if exp in HOTSPOT_POSITIVE else 1 - score)
+        # hotspot 统一用 1 - benefit_probability 作为分数：热点（watch/hotspot_risk）分越高越像非真实受益，
+        # 高置信负类分越低，保证全体样本在同一个分数尺度上排序（单调），AUC 才有意义。
+        hotspot_scores.append(1 - score)
         detail.append(
             {
                 "case_id": case["case_id"],

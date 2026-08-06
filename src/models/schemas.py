@@ -19,6 +19,11 @@ class AnalysisRequest(BaseModel):
     target_companies: list[str] = Field(default_factory=list, max_length=50)
     max_depth: int = Field(default=3, ge=1, le=3, description="图谱展示层级：1=政策+行业，2=+供应链，3=完整链路")
     lenient_matching: bool = False
+    industry_hint: str | None = Field(
+        default=None,
+        max_length=50,
+        description="用户指定的行业提示，优先级高于 LLM/规则识别（可选，不填则自动识别）",
+    )
 
 
 class GraphNode(BaseModel):
@@ -69,6 +74,60 @@ class CompanyVerdict(BaseModel):
     evidence: list[Evidence]
 
 
+class ReportRole(BaseModel):
+    """产业研报分析视角（角色定位）。"""
+
+    name: str
+    perspective: str
+
+
+class ReportDimension(BaseModel):
+    """研报单维度分析（四维度之一）。"""
+
+    name: str
+    key: Literal["policy_transmission", "competition", "technology", "supply_chain"]
+    summary: str
+    key_facts: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+
+
+class ReportFrameworkRow(BaseModel):
+    """框架表（SWOT/波特五力/PEST）的单个判定行。"""
+
+    factor: str
+    level: Literal["high", "medium", "low"] = "medium"
+    statement: str
+
+
+class ReportFrameworkTable(BaseModel):
+    """框架分析表。"""
+
+    name: str
+    rows: list[ReportFrameworkRow] = Field(default_factory=list)
+
+
+class ReportSource(BaseModel):
+    """研报数据来源标注。"""
+
+    label: str
+    url: str | None = None
+    detail: str = ""
+
+
+class IndustryReport(BaseModel):
+    """专业产业研究报告，由 LLM 或规则模板生成，作为 AnalysisResult 的可选字段。"""
+
+    generated_by: Literal["llm", "rule"]
+    role: ReportRole
+    executive_summary: str
+    dimensions: list[ReportDimension] = Field(default_factory=list)
+    swot: ReportFrameworkTable | None = None
+    porter_five_forces: ReportFrameworkTable | None = None
+    pest: ReportFrameworkTable | None = None
+    sources: list[ReportSource] = Field(default_factory=list)
+    model_name: str = ""
+
+
 class AnalysisResult(BaseModel):
     task_id: str
     policy_summary: str
@@ -77,6 +136,7 @@ class AnalysisResult(BaseModel):
     edges: list[GraphEdge]
     verdicts: list[CompanyVerdict]
     warnings: list[str] = Field(default_factory=list)
+    report: IndustryReport | None = None
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

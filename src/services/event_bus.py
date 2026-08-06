@@ -79,6 +79,7 @@ class NodeEventReporter:
         "broaden_evidence": "放宽检索重试",
         "adversarial_check": "对抗式核验",
         "assemble_graph": "装配图谱",
+        "compose_report": "生成研报",
     }
 
     def __init__(

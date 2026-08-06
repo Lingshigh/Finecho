@@ -6,8 +6,8 @@ from agent.state import AnalysisState
 from src.services.rag_service import GraphRAGService
 
 
-def build_analysis_graph(rag: GraphRAGService, llm: OptionalPolicyLLM):
-    nodes = build_nodes(rag, llm)
+def build_analysis_graph(rag: GraphRAGService, llm: OptionalPolicyLLM, policy_bridge=None):
+    nodes = build_nodes(rag, llm, policy_bridge)
     graph = StateGraph(AnalysisState)
     for name, node in nodes.items():
         graph.add_node(name, node)
@@ -36,7 +36,8 @@ def build_analysis_graph(rag: GraphRAGService, llm: OptionalPolicyLLM):
     )
     graph.add_edge("broaden_evidence", "gather_evidence")
 
-    # 对抗式核验 → 图谱装配。
+    # 对抗式核验 → 图谱装配 → 产业研报。
     graph.add_edge("adversarial_check", "assemble_graph")
-    graph.add_edge("assemble_graph", END)
+    graph.add_edge("assemble_graph", "compose_report")
+    graph.add_edge("compose_report", END)
     return graph.compile()

@@ -19,10 +19,11 @@ class AnalysisService:
         rag: GraphRAGService,
         llm: OptionalPolicyLLM,
         event_bus: EventBus | None = None,
+        policy_bridge=None,
     ) -> None:
         self.repository = repository
         self._event_bus = event_bus
-        self.workflow = build_analysis_graph(rag, llm)
+        self.workflow = build_analysis_graph(rag, llm, policy_bridge)
         self._graph_nodes = set(self.workflow.get_graph().nodes) - {"__start__", "__end__"}
 
     @property
@@ -60,6 +61,7 @@ class AnalysisService:
                 edges=state["edges"],
                 verdicts=state["verdicts"],
                 warnings=state["warnings"],
+                report=state.get("report"),
             )
             await self.repository.set_result(task_id, result)
             await self.event_bus.publish(
