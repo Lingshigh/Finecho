@@ -1,106 +1,111 @@
-# FinEcho 后端初版
+# FinEcho 政策回声 · 产业链影响归因与受益真实性核验
 
-面向突发政策的产业链影响归因与上市公司受益真实性核验服务。项目按原始目录拆分：
+> **一句话简介**：帮投研/媒体/投资者在政策发布后几十秒内拿到"谁真正受益 + 证据链 + 产业研报"的 AI 产业链分析助手
 
-```text
-agent/  LangGraph 状态、节点、工作流与可选 LLM 解析器
-api/    FastAPI 路由、依赖注入、异常处理与 API 中间件
-app/    配置、生命周期及应用入口
-data/   可替换的演示公司与证据数据
-src/    模型、Repository、GraphRAG 与业务服务
-tests/  GraphRAG 单测及 HTTP 全链路测试
-```
+**AIY 黑客松 2026 深圳站** 参赛作品
 
-## 快速启动
+命题企业 / 赛道：**Coze · 智能体方向**
+
+团队：**Hype Light**
+
+团队编号：**AD0034**（组委会分配）
+
+---
+
+## 👥 团队分工
+
+| 成员 | 负责 |
+|---|---|
+| 胡凯昕 | 后端开发、LangGraph 多 Agent 流水线、Coze 智能体搭建 |
+| 叶冠希 | 前端界面、交互设计、演示视频 |
+| 罗劲波 | 数据管线（AKShare 真实数据接入）、政策库构建、评测基准 |
+| 梁嘉伟 | 用户调研、Pitch 路演、产品定位 |
+
+---
+
+## ✨ 它能做什么
+
+- **功能一：突发政策 → 产业链传导图谱**
+  输入一段政策（如"新型储能示范政策"），AI 智能体自动解构政策、识别行业、沿产业链匹配受益公司，几秒内生成一张"政策 → 行业 → 供应链 → 公司"的可交互传导图谱，并标注每家公司的受益判定与置信度。
+
+- **功能二：上市公司受益真实性核验（对抗式事实核查）**
+  不只是给"利好名单"——系统用对抗式核验拆穿蹭热点：对每家公司做受益概率、蹭热点风险、业务暴露度三维评分，并回链到真实财报公告证据。那个自称受益但收入占比仅 3% 的"幻影科技"会被直接标记为**蹭热点风险**。
+
+- **功能三：专业产业研究报告（LLM + 规则双引擎）**
+  自动生成麦肯锡/投行风格的产业研报：四维度（政策影响传导 / 市场竞争格局 / 技术迭代路径 / 供应链风险）+ SWOT / 波特五力 / PEST 三框架 + 全数据来源标注，一键下载 Markdown 简报。无 API Key 时规则引擎兜底，链路永不断。
+
+- **功能四：政策事实库（582+ 条真实政策 + 上下位关系）**
+  沉淀国务院、部委、地方公开政策，支持按层级/行业/地区多维筛选，政策脉络图展示"依据 → 落实 → 地方细化"的上下位关系，深圳产业政策已接入。
+
+- **功能五：实时进度可视化**
+  Agent 每步执行（解构→匹配→核验→装配→研报）通过 SSE 事件流实时推送到前端，你能亲眼看到 AI 一步步"干活"。
+
+---
+
+## 🎬 演示
+
+> 在线体验：`http://localhost:5173`（本地启动后打开）
+
+**【工作台演示图】**（提交时替换为截图/GIF）
+
+| 产业分析工作台 | 产业链图谱 | 产业研究报告 |
+|---|---|---|
+| 输入政策 + 行业下拉 | 可交互传导图谱 + 核验着色 | 四维度 + SWOT/波特五力/PEST |
+| 实时 SSE 进度 | 蹭热点公司红色警示 | 数据来源标注 |
+
+**30 秒上手**：打开工作台 → 提交"新型储能示范政策" → 看 Agent 一步步执行 → 查看图谱、核验结论、完整研报。
+
+---
+
+## 🛠 用到的技术 / AI 工具
+
+| 层 | 技术 |
+|---|---|
+| **AI 智能体** | LangGraph 多 Agent 工作流、LLM 结构化输出（Coze / OpenAI 协议）、对抗式事实核查 |
+| **后端** | Python 3.11、FastAPI、Pydantic、SSE 事件流 |
+| **数据智能** | GraphRAG 图遍历召回（NetworkX）、TF-IDF 余弦检索、产业链规则表 |
+| **真实数据** | AKShare（东财/巨潮财务与公告）、深圳市政府公开政策页 |
+| **前端** | React 18、Vite、TypeScript、可交互 SVG 图谱 |
+
+---
+
+## 🚀 怎么跑起来
 
 ```bash
+# 1. 后端（根目录）
 python -m venv .venv
 # Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
-copy .env.example .env
-uvicorn app.main:app --reload
+copy .env.example .env            # 可选：配 OPENAI_API_KEY 启用大模型
+uvicorn app.main:app --reload     # http://localhost:8000
+
+# 2. 前端（frontend/ 目录）
+cd frontend
+npm install
+npm run dev                       # http://localhost:5173
 ```
 
-启动后访问 `http://localhost:8000/docs`。未设置 `OPENAI_API_KEY` 时，系统使用确定性规则解析政策，整条 API 链路仍可运行。要启用模型解析：
+打开 `http://localhost:5173/workbench` 提交一条政策即可体验完整链路。
 
-```bash
-pip install -e ".[dev,llm]"
-```
+> 未配置 API Key 时，系统使用确定性规则解析与生成研报，全部功能仍可用。
 
-## 主要接口
+---
 
-| 方法 | 路径 | 用途 |
-|---|---|---|
-| `GET` | `/health`、`/ready` | 存活/就绪检查 |
-| `POST` | `/api/v1/analyses` | 提交政策分析，返回任务 ID 与事件流地址 |
-| `GET` | `/api/v1/analyses/{task_id}` | 查询任务状态和结果 |
-| `GET` | `/api/v1/analyses/{task_id}/events` | SSE 事件流：Agent 每步进度实时推送 |
-| `GET` | `/api/v1/analyses/{task_id}/result` | 只读取完成结果 |
-| `GET` | `/api/v1/graphs/{task_id}` | 获取前端图谱的 nodes/edges |
-| `GET` | `/api/v1/companies/{id}` | 获取公司基本面样例 |
-| `GET` | `/api/v1/companies/{id}/evidence?q=...` | 靶向检索证据 |
-| `GET` | `/api/v1/reports/{task_id}.md` | 下载一页式 Markdown 简报 |
+## 📌 后续计划
 
-提交示例：
+- [ ] **扩大公司池**：AKShare 动态行业公司池（半导体/机器人/低空等），让任意行业政策都能匹配到真实标的
+- [ ] **深圳政策深度接入**：接深圳市政府数据开放平台 API（appKey），替换公开页抓取
+- [ ] **评测集扩容**：从 16 个 case 扩展到百级标注，提升核验 ACC/AUC 泛化力
+- [ ] **真实财务口径**：用财报分部收入占比替换手写暴露度
+- [ ] **政策正文 PDF 流水线**：下载 → OCR → 分段 → Embedding，政策库从索引级升级到正文级
+- [ ] **PostgreSQL + Redis 落地**：从内存存储走向生产并发
 
-```bash
-curl -X POST http://localhost:8000/api/v1/analyses \
-  -H "Content-Type: application/json" \
-  -d '{
-    "policy_title": "新型储能示范政策",
-    "policy_text": "支持新型储能项目建设，推动储能电池及新能源产业发展。"
-  }'
-```
+持续迭代记录，正是它作为"真实产品"的价值所在。
 
-## 已实现的 API 中间件
+---
 
-- 请求 ID 与 JSON 结构化访问日志
-- 可选 `X-API-Key` 鉴权（`.env` 中配置 `API_KEY` 后开启）
-- 基于客户端 IP 的内存限流，并返回限流响应头
-- 请求体大小限制、统一参数校验与异常响应
-- CORS、安全响应头、处理耗时响应头
+## 📄 版权与许可
 
-## 从演示版升级到生产版
+本作品版权归 **叶冠希、胡凯昕、罗劲波、梁嘉伟** 共同所有，采用 [MIT License](./LICENSE) 开源，使用请署名。
 
-1. 将 InMemoryJobRepository 换为 PostgreSQL/Redis，将后台任务换为 Arq/Celery。
-2. 在 GraphRAGService后接 ChromaDB 向量召回，并把财报实体关系写入 Neo4j 或图数据库。
-3. 将 PDF 入库拆成独立流水线：下载、OCR、MD&A/问询函分段、元数据校验、Embedding。
-4. 对财务比例使用结构化财务表计算；LLM 只负责提取候选与解释，不能直接生成数字。
-5. API Key 适合黑客松演示；正式环境应接 OAuth2/JWT、可信代理和分布式限流。
-
-## 真实数据刷新
-
-`data/` 里 4 家真实公司的财务指标与证据来自 **AKShare 免费接口**（东财/巨潮官方披露），
-可用脚本一键刷新：
-
-```bash
-pip install akshare
-python scripts/fetch_real_data.py          # 重新拉取并写入 data/companies.json 与 evidence.json
-python scripts/fetch_real_data.py --dry-run  # 只预览不写入
-```
-
-- 财务指标：营收 / 归母净利 / 研发费用（利润表 RESEARCH_EXPENSE）/ ROE / 市值；
-- 证据：巨潮公告接口按"年报/季报优先 + 行业关键词补足"筛选的真实披露标题与链接；
-- 演示热点公司（`000001.DEMO`）与 `chain_rules.json` / `eval_cases.json` 保持不变，
-  不影响现有测试与评测基线（ACC 0.688 / AUC 0.7）。
-
-## 优化记录
-
-- [01 多 Agent 条件路由与循环回退](docs/optimization-01-langgraph-multi-agent.md)：核验拆分为 form_candidate / gather_evidence / adversarial_check 三个 Agent，匹配与证据两处循环放宽且保证有界终止。
-- [02 LLM 对抗式事实核查](docs/optimization-02-llm-adversarial-factcheck.md)：把 LLM 接入对抗式核验，规则分 + LLM 立场加权合成，无 key/依赖缺失/API 故障均安全降级。
-- [03 核验评测基准](docs/optimization-03-evaluation-benchmark.md)：标注数据集 + 评测脚本，输出混淆矩阵 / per-class 指标 / hotspot AUC（当前基线 ACC 0.688、AUC 0.7）。
-- [04 实现 max_depth 控制链条层数](docs/optimization-04-max-depth.md)：`max_depth` 控制图谱展示层级（1=政策+行业，2=+供应链，3=完整链路），分析与核验始终用全量数据，不同 depth 下判定一致。
-- [05 GraphRAG 图遍历召回 + TF-IDF 排序](docs/optimization-05-graphrag-graph-traversal.md)：候选召回从字符串 overlap 升级为 BFS 图遍历（industry→company→product 传导链），证据排序从词袋交集升级为 TF-IDF 余弦，检索质量不变、语义结构落地。
-- [06 产业链规则表外置 + 语义化匹配](docs/optimization-06-chain-rules-semantic-matching.md)：`CHAIN_RULES` 搬入 `data/chain_rules.json` 可运营扩充，匹配从子串互含改为完整词 + 同义词表（`半导` 不再误触发 `半导体`），评测基线不变。
-- [07 SSE 事件流推送](docs/optimization-07-sse-event-stream.md)：任务从轮询升级为 SSE 实时推送，`astream_events` 逐节点转发 + 内存事件总线，Agent 每步（含重试）在事件流中可见。
-- [08 AKShare 真实数据接入](docs/optimization-08-akshare-real-data.md)：`data/` 换血为真实公司财务与巨潮公告，`scripts/fetch_real_data.py` 一键拉取，顺手修复 RAG 归一化的隐性 bug。
-
-## 评测
-
-```bash
-python tests/evaluate_verdicts.py   # 输出混淆矩阵与 ACC/AUC/F1
-```
-
-> `data/` 中所有公司比例与文本均为演示数据，不构成投资建议，也不能用于真实交易决策。
-
+> 本项目为 AIY 黑客松参赛作品，作品归团队所有；AIY 组委会仅作收录与展示。
